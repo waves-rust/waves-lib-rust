@@ -11,19 +11,21 @@ use ed25519_dalek::*;
 use rand::Rng;
 use sha2::{Digest, Sha512};
 
+static INITBUF: [u8; 32] =[ 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+
 pub fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
-    let mlen = message.len();
-    let mut buf: Vec<u8> = vec![0; mlen + 128];
     let mut rand= rand::thread_rng();
 
-    buf[0] = 0xfe;
-    (1..32).for_each(|i| buf[i] = 0xff);
-    buf[32..64].copy_from_slice(secret_key);
-    buf[64..64 + mlen].copy_from_slice(message);
-    (65 + mlen..128 + mlen).for_each(|i| buf[i] = rand.gen::<u8>());
-
     let mut hash = Sha512::default();
-    hash.input(&buf);
+    hash.input(&INITBUF);
+
+    hash.input(secret_key);
+    hash.input(message);
+
+    let mut rndbuf: Vec<u8> = vec![0; 64];
+    (0..63).for_each(|i| rndbuf[i] = rand.gen::<u8>());
+    hash.input(&rndbuf);
+
     let rsc = Scalar::from_hash(hash);
     let r = (&rsc * &constants::ED25519_BASEPOINT_TABLE).compress().to_bytes();
 
@@ -31,9 +33,9 @@ pub fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNAT
     let pubkey = ed_pubkey.compress().to_bytes();
 
     hash = Sha512::default();
-    buf[..32].copy_from_slice(&r);
-    buf[32..64].copy_from_slice(&pubkey);
-    hash.input(&buf[..64 + mlen]);
+    hash.input(&r);
+    hash.input(&pubkey);
+    hash.input(message);
     let s = &(&Scalar::from_hash(hash) * &Scalar::from_bits(*secret_key)) + &rsc;
 
     let sign = pubkey[31] & 0x80;
