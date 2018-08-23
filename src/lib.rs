@@ -1,26 +1,85 @@
 extern crate base58;
 extern crate curve25519_dalek;
+extern crate digest;
 extern crate ed25519_dalek; // for LENGTH constants
 extern crate rand;
 extern crate sha2;
 
+use base58::*;
 use curve25519_dalek::constants;
 use curve25519_dalek::montgomery::MontgomeryPoint;
 use curve25519_dalek::scalar::Scalar;
+use digest::Input;
 use ed25519_dalek::*;
 use rand::Rng;
 use sha2::{Digest, Sha512};
 
-static INITBUF: [u8; 32] =[ 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+static INITBUF: [u8; 32] = [
+    0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
 
-pub fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
+trait Flushable {
+    fn flush(&self, sink: &mut Input) -> ();
+}
+
+struct Buffer {
+    buf: Vec<u8>
+}
+
+impl Buffer {
+    fn new() -> Buffer {
+        Buffer { buf: Vec::new() }
+    }
+
+    fn from_bytes(b: &[u8]) -> Buffer {
+        Buffer { buf: Vec::from(b) }
+    }
+
+    fn bytes(self: &mut Buffer, b: &[u8]) -> &mut Buffer {
+        self.buf.extend_from_slice(b);
+        self
+    }
+
+    fn byte(self: &mut Buffer, b: u8) -> &mut Buffer {
+        self.buf.push(b);
+        self
+    }
+
+    fn short(&mut self, n: u16) -> &mut Buffer {
+        let bytes = [((n >> 8) & 0xff) as u8, (n & 0xff) as u8];
+        self.bytes(&bytes)
+    }
+
+    fn long(&mut self, n: u64) -> &mut Buffer {
+        let bytes = [
+            ((n >> 56) & 0xff) as u8, ((n >> 48) & 0xff) as u8,
+            ((n >> 40) & 0xff) as u8, ((n >> 32) & 0xff) as u8,
+            ((n >> 24) & 0xff) as u8, ((n >> 16) & 0xff) as u8,
+            ((n >> 8) & 0xff) as u8, (n & 0xff) as u8];
+        self.bytes(&bytes)
+    }
+}
+
+impl Flushable for Buffer {
+    fn flush(&self, sink: &mut Input) -> () {
+        sink.process(self.buf.as_slice());
+    }
+}
+
+impl Flushable for [u8] {
+    fn flush(&self, sink: &mut Input) -> () {
+        sink.process(self);
+    }
+}
+
+fn sign(message: &Flushable, secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
     let mut rand= rand::thread_rng();
 
     let mut hash = Sha512::default();
     hash.input(&INITBUF);
 
     hash.input(secret_key);
-    hash.input(message);
+    message.flush(&mut hash);
 
     let mut rndbuf: Vec<u8> = vec![0; 64];
     (0..63).for_each(|i| rndbuf[i] = rand.gen::<u8>());
@@ -35,7 +94,7 @@ pub fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNAT
     hash = Sha512::default();
     hash.input(&r);
     hash.input(&pubkey);
-    hash.input(message);
+    message.flush(&mut hash);
     let s = &(&Scalar::from_hash(hash) * &Scalar::from_bits(*secret_key)) + &rsc;
 
     let sign = pubkey[31] & 0x80;
@@ -47,7 +106,7 @@ pub fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNAT
     result
 }
 
-pub fn sig_verify(message: &[u8], public_key: &[u8; PUBLIC_KEY_LENGTH], signature: &[u8; SIGNATURE_LENGTH]) -> bool {
+fn sig_verify(message: &[u8], public_key: &[u8; PUBLIC_KEY_LENGTH], signature: &[u8; SIGNATURE_LENGTH]) -> bool {
     let sign = signature[63] & 0x80;
     let mut sig = [0u8; SIGNATURE_LENGTH];
     sig.copy_from_slice(signature);
@@ -71,9 +130,10 @@ mod tests {
     fn test_signatures() {
         for _ in 1..50 {
             let msg: [u8; 32] = rand::thread_rng().gen();
+            let mut buf = Buffer::from_bytes(&msg);
             let mut sk = [0u8; 32];
             sk.copy_from_slice(&"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT".from_base58().unwrap().as_slice());
-            let sig = sign( & msg, &sk);
+            let sig = sign( &buf, &sk);
             println ! ("(\"{}\", \"{}\", \"{}\"),", msg.to_base58(), sk.to_base58(), sig.to_base58());
         }
         assert!(true);
@@ -82,11 +142,12 @@ mod tests {
     #[test]
     fn test_signature() {
         let msg = "bagira".as_bytes();
+        let mut buf = Buffer::from_bytes(msg);
         let mut sk = [0u8; SECRET_KEY_LENGTH];
         sk.copy_from_slice(&"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT".from_base58().unwrap().as_slice());
         let mut pk = [0u8; PUBLIC_KEY_LENGTH];
         pk.copy_from_slice("GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
-        let sig = sign(msg, &sk);
+        let sig = sign(&buf, &sk);
         println!("sig = {}", sig.to_base58());
         assert!(sig_verify(msg, &pk, &sig))
     }
