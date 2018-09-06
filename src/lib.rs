@@ -19,7 +19,7 @@ const TRANSFER: u8 = 4;
 const REISSUE: u8 = 5;
 const BURN: u8 = 6;
 const LEASE: u8 = 8;
-const CANCEL_LEASE: u8 = 9;
+const LEASE_CANCEL: u8 = 9;
 const ALIAS: u8 = 10;
 const MASS_TRANSFER: u8 = 11;
 const DATA: u8 = 12;
@@ -28,21 +28,71 @@ const SPONSOR: u8 = 14;
 
 const V2: u8 = 2;
 
-fn write_recipient(buf: &mut Buffer, chain_id: u8, recipient: &str) -> () {
-    if recipient.len() <= 30 {
-        // assume an alias
-        buf.byte(0x02).byte(chain_id).size(recipient.len()).bytes(&recipient.as_bytes());
-    } else {
-        buf.bytes(&recipient.from_base58().unwrap().as_slice());
-    }
+fn sign_issue(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
+              name: &str, description: &str, quantity: u64, decimals: u8, reissuable: bool,
+              script: &str, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+    sign_output(&|buf: &mut Buffer|
+        buf.byte(ISSUE).byte(V2).byte(chain_id).bytes(public_key)
+            .array(name.as_bytes())
+            .array(description.as_bytes())
+            .long(quantity).byte(decimals).boolean(reissuable)
+            .long(fee).long(timestamp), secret_key)
 }
 
-fn sign_lease(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8, recipient: &str, amount: u64, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
-    let mut buf = Buffer::new();
-    buf.byte(LEASE).byte(V2).byte(0).bytes(public_key);
-    write_recipient(&mut buf, chain_id, recipient);
-    buf.long(amount).long(fee).long(timestamp);
-    sign(buf.as_slice(), secret_key)
+fn sign_reissue(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
+                asset_id: &str, quantity: u64, reissuable: bool,
+                fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+    sign_output(&|buf: &mut Buffer|
+        buf.byte(REISSUE).byte(V2).byte(chain_id).bytes(public_key)
+            .bytes(asset_id.from_base58().unwrap().as_slice())
+            .long(quantity).boolean(reissuable).long(fee).long(timestamp), secret_key)
+}
+
+fn sign_burn(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
+             asset_id: &str, quantity: u64, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+    sign_output(&|buf: &mut Buffer|
+        buf.byte(BURN).byte(V2).byte(chain_id).bytes(public_key)
+            .bytes(asset_id.from_base58().unwrap().as_slice())
+            .long(quantity).long(fee).long(timestamp), secret_key)
+}
+
+//fn sign_transfer(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], recipient: &str,
+//                 asset_id: Option<&[u8]>, amount: u64, fee_asset_id: Option<&[u8]>, fee: u64,
+//                 attachment: &str, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+//    let mut buf = Buffer::new();
+//    buf.byte(TRANSFER).byte(V2).bytes(public_key)
+//        .asset_id(asset_id).asset_id(fee_asset_id)
+//        .long(timestamp).long(amount).long(fee)
+//        .recipient(recipient).array(attachment.as_bytes());
+//    sign(buf.as_slice(), secret_key)
+//}
+
+fn sign_lease(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
+              recipient: &str, amount: u64, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+    sign_output(&|buf: &mut Buffer|
+        buf.byte(LEASE).byte(V2).byte(0).bytes(public_key)
+            .recipient(chain_id, recipient)
+            .long(amount).long(fee).long(timestamp), secret_key)
+}
+
+fn sign_lease_cancel(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
+                     lease_id: &[u8], fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+    sign_output(&|buf: &mut Buffer|
+        buf.byte(LEASE_CANCEL).byte(V2).byte(chain_id).bytes(public_key)
+            .long(fee).long(timestamp).bytes(lease_id), secret_key)
+}
+
+fn sign_alias(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], alias: &str,
+              fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+    sign_output(&|buf: &mut Buffer|
+        buf.byte(ALIAS).byte(V2).bytes(public_key)
+            .array(alias.as_bytes()).long(fee).long(timestamp), secret_key)
+}
+
+fn sign_output(writer: &Fn(&mut Buffer) -> &mut Buffer, secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
+    let mut buf = &mut Buffer::new();
+    let tmp = writer(&mut buf);
+    sign(tmp.as_slice(), secret_key)
 }
 
 static INITBUF: [u8; 32] = [
@@ -88,6 +138,32 @@ impl Buffer {
             ((n >> 24) & 0xff) as u8, ((n >> 16) & 0xff) as u8,
             ((n >> 8) & 0xff) as u8, (n & 0xff) as u8];
         self.bytes(&bytes)
+    }
+
+    fn boolean(&mut self, b: bool) -> &mut Buffer {
+        let val = if b {1} else {0};
+        self.buf.push(val);
+        self
+    }
+
+    fn recipient(&mut self, chain_id: u8, recipient: &str) -> &mut Buffer {
+        if recipient.len() <= 30 {
+            // assume an alias
+            self.byte(0x02).byte(chain_id).size(recipient.len()).bytes(&recipient.as_bytes())
+        } else {
+            self.bytes(&recipient.from_base58().unwrap().as_slice())
+        }
+    }
+
+    fn array(&mut self, arr: &[u8]) -> &mut Buffer {
+        self.size(arr.len()).bytes(arr)
+    }
+
+    fn asset_id(&mut self, asset_id: Option<&[u8]>) -> &mut Buffer {
+        match asset_id {
+            Some(id) => self.byte(1).bytes(id),
+            None => self.byte(0)
+        }
     }
 
     fn as_slice(&self) -> &[u8] {
