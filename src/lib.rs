@@ -14,6 +14,37 @@ use ed25519_dalek::*;
 use rand::Rng;
 use sha2::{Digest, Sha512};
 
+const ISSUE: u8 = 3;
+const TRANSFER: u8 = 4;
+const REISSUE: u8 = 5;
+const BURN: u8 = 6;
+const LEASE: u8 = 8;
+const CANCEL_LEASE: u8 = 9;
+const ALIAS: u8 = 10;
+const MASS_TRANSFER: u8 = 11;
+const DATA: u8 = 12;
+const SET_SCRIPT: u8 = 13;
+const SPONSOR: u8 = 14;
+
+const V2: u8 = 2;
+
+fn write_recipient(buf: &mut Buffer, chain_id: u8, recipient: &str) -> () {
+    if recipient.len() <= 30 {
+        // assume an alias
+        buf.byte(0x02).byte(chain_id).size(recipient.len()).bytes(&recipient.as_bytes());
+    } else {
+        buf.bytes(&recipient.from_base58().unwrap().as_slice());
+    }
+}
+
+fn sign_lease(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8, recipient: &str, amount: u64, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
+    let mut buf = Buffer::new();
+    buf.byte(LEASE).byte(V2).byte(0).bytes(public_key);
+    write_recipient(&mut buf, chain_id, recipient);
+    buf.long(amount).long(fee).long(timestamp);
+    sign(buf.as_slice(), secret_key)
+}
+
 static INITBUF: [u8; 32] = [
     0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
@@ -45,7 +76,7 @@ impl Buffer {
         self
     }
 
-    fn short(&mut self, n: u16) -> &mut Buffer {
+    fn size(&mut self, n: usize) -> &mut Buffer {
         let bytes = [((n >> 8) & 0xff) as u8, (n & 0xff) as u8];
         self.bytes(&bytes)
     }
@@ -58,28 +89,20 @@ impl Buffer {
             ((n >> 8) & 0xff) as u8, (n & 0xff) as u8];
         self.bytes(&bytes)
     }
-}
 
-impl Flushable for Buffer {
-    fn flush(&self, sink: &mut Input) -> () {
-        sink.process(self.buf.as_slice());
+    fn as_slice(&self) -> &[u8] {
+        self.buf.as_slice()
     }
 }
 
-impl Flushable for [u8] {
-    fn flush(&self, sink: &mut Input) -> () {
-        sink.process(self);
-    }
-}
-
-fn sign(message: &Flushable, secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
+fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
     let mut rand= rand::thread_rng();
 
     let mut hash = Sha512::default();
     hash.input(&INITBUF);
 
     hash.input(secret_key);
-    message.flush(&mut hash);
+    hash.input(message);
 
     let mut rndbuf: Vec<u8> = vec![0; 64];
     (0..63).for_each(|i| rndbuf[i] = rand.gen::<u8>());
@@ -94,7 +117,7 @@ fn sign(message: &Flushable, secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNA
     hash = Sha512::default();
     hash.input(&r);
     hash.input(&pubkey);
-    message.flush(&mut hash);
+    hash.input(message);
     let s = &(&Scalar::from_hash(hash) * &Scalar::from_bits(*secret_key)) + &rsc;
 
     let sign = pubkey[31] & 0x80;
@@ -133,7 +156,7 @@ mod tests {
             let mut buf = Buffer::from_bytes(&msg);
             let mut sk = [0u8; 32];
             sk.copy_from_slice(&"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT".from_base58().unwrap().as_slice());
-            let sig = sign( &buf, &sk);
+            let sig = sign(buf.as_slice(), &sk);
             println ! ("(\"{}\", \"{}\", \"{}\"),", msg.to_base58(), sk.to_base58(), sig.to_base58());
         }
         assert!(true);
@@ -147,7 +170,7 @@ mod tests {
         sk.copy_from_slice(&"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT".from_base58().unwrap().as_slice());
         let mut pk = [0u8; PUBLIC_KEY_LENGTH];
         pk.copy_from_slice("GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
-        let sig = sign(&buf, &sk);
+        let sig = sign(buf.as_slice(), &sk);
         println!("sig = {}", sig.to_base58());
         assert!(sig_verify(msg, &pk, &sig))
     }
@@ -164,5 +187,16 @@ mod tests {
                 .from_base58().unwrap().as_slice());
 
         assert!(sig_verify(msg, &pk, &sig));
+    }
+
+    #[test]
+    fn test_sign_lease() {
+        let mut sk = [0u8; SECRET_KEY_LENGTH];
+        sk.copy_from_slice(&"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT".from_base58().unwrap().as_slice());
+        let mut pk = [0u8; PUBLIC_KEY_LENGTH];
+        pk.copy_from_slice("GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
+        let sig = sign_lease(&sk, &pk, 84 as u8, "3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K", 100000, 100000, 1500000000000);
+        println!("sig = {}", sig.to_base58());
+        assert!(sig.len() == 2);
     }
 }
