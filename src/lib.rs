@@ -28,32 +28,82 @@ const SPONSOR: u8 = 14;
 
 const V2: u8 = 2;
 
-fn sign_issue(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
-              name: &str, description: &str, quantity: u64, decimals: u8, reissuable: bool,
-              script: &str, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
-    sign_output(&|buf: &mut Buffer|
-        buf.byte(ISSUE).byte(V2).byte(chain_id).bytes(public_key)
-            .array(name.as_bytes())
-            .array(description.as_bytes())
-            .long(quantity).byte(decimals).boolean(reissuable)
-            .long(fee).long(timestamp), secret_key)
+enum TransactionData<'a> {
+    Issue { name: &'a str, description: &'a str, quantity: u64, decimals: u8, reissuable: bool, chain_id: u8 },
+    Reissue { asset_id: &'a str, quantity: u64, reissuable: bool, chain_id: u8 },
+    Burn { asset_id: &'a str, quantity: u64, chain_id: u8 },
+//    Transfer { },
+    Lease { recipient: &'a str, amount: u64, chain_id: u8 },
+    LeaseCancel { lease_id: &'a str, chain_id: u8 },
+    Alias { alias: &'a str },
 }
 
-fn sign_reissue(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
-                asset_id: &str, quantity: u64, reissuable: bool,
-                fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
-    sign_output(&|buf: &mut Buffer|
-        buf.byte(REISSUE).byte(V2).byte(chain_id).bytes(public_key)
-            .bytes(asset_id.from_base58().unwrap().as_slice())
-            .long(quantity).boolean(reissuable).long(fee).long(timestamp), secret_key)
+struct Transaction<'a> {
+    data: TransactionData<'a>,
+    fee: u64,
+    timestamp: u64,
+    sender_public_key: &'a [u8; PUBLIC_KEY_LENGTH],
+    type_id: u8,
+    version: u8,
 }
 
-fn sign_burn(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
-             asset_id: &str, quantity: u64, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
-    sign_output(&|buf: &mut Buffer|
-        buf.byte(BURN).byte(V2).byte(chain_id).bytes(public_key)
-            .bytes(asset_id.from_base58().unwrap().as_slice())
-            .long(quantity).long(fee).long(timestamp), secret_key)
+impl <'a> Transaction<'a> {
+    pub fn new_lease(sender_public_key: &'a [u8; PUBLIC_KEY_LENGTH], recipient: &'a str, amount: u64,
+                     chain_id: u8, fee: u64, timestamp: u64) -> Transaction<'a> {
+        Transaction {
+            data: TransactionData::Lease { recipient, amount, chain_id },
+            fee,
+            timestamp,
+            sender_public_key,
+            type_id: LEASE,
+            version: V2
+        }
+    }
+
+    pub fn new_alias(sender_public_key: &'a [u8; PUBLIC_KEY_LENGTH], alias: &'a str,
+                     fee: u64, timestamp: u64) -> Transaction<'a> {
+        Transaction {
+            data: TransactionData::Alias { alias },
+            fee,
+            timestamp,
+            sender_public_key,
+            type_id: ALIAS,
+            version: V2
+        }
+    }
+
+    pub fn sign(&self, secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
+        let mut buf = &mut Buffer::new();
+        buf.byte(self.type_id).byte(self.version);
+        match self.data {
+            TransactionData::Issue { name, description, quantity, decimals, reissuable, chain_id } =>
+                buf.byte(chain_id).bytes(self.sender_public_key)
+                    .array(name.as_bytes())
+                    .array(description.as_bytes())
+                    .long(quantity).byte(decimals).boolean(reissuable)
+                    .long(self.fee).long(self.timestamp),
+            TransactionData::Reissue { asset_id, quantity, reissuable, chain_id } =>
+                buf.byte(chain_id).bytes(self.sender_public_key)
+                    .bytes(asset_id.from_base58().unwrap().as_slice())
+                    .long(quantity).boolean(reissuable)
+                    .long(self.fee).long(self.timestamp),
+            TransactionData::Burn { asset_id, quantity, chain_id } =>
+                buf.byte(chain_id).bytes(self.sender_public_key)
+                    .bytes(asset_id.from_base58().unwrap().as_slice()).long(quantity)
+                    .long(self.fee).long(self.timestamp),
+            TransactionData::Lease { recipient, amount, chain_id } =>
+                buf.byte(0).bytes(self.sender_public_key).recipient(chain_id, recipient)
+                    .long(amount).long(self.fee).long(self.timestamp),
+            TransactionData::LeaseCancel { lease_id, chain_id } =>
+                buf.byte(chain_id).bytes(self.sender_public_key)
+                    .long(self.fee).long(self.timestamp)
+                    .bytes(lease_id.from_base58().unwrap().as_slice()),
+            TransactionData::Alias { alias } =>
+                buf.bytes(self.sender_public_key).array(alias.as_bytes())
+                    .long(self.fee).long(self.timestamp),
+        };
+        sign(buf.as_slice(), secret_key)
+    }
 }
 
 //fn sign_transfer(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], recipient: &str,
@@ -67,41 +117,9 @@ fn sign_burn(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: 
 //    sign(buf.as_slice(), secret_key)
 //}
 
-fn sign_lease(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
-              recipient: &str, amount: u64, fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
-    sign_output(&|buf: &mut Buffer|
-        buf.byte(LEASE).byte(V2).byte(0).bytes(public_key)
-            .recipient(chain_id, recipient)
-            .long(amount).long(fee).long(timestamp), secret_key)
-}
-
-fn sign_lease_cancel(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], chain_id: u8,
-                     lease_id: &[u8], fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
-    sign_output(&|buf: &mut Buffer|
-        buf.byte(LEASE_CANCEL).byte(V2).byte(chain_id).bytes(public_key)
-            .long(fee).long(timestamp).bytes(lease_id), secret_key)
-}
-
-fn sign_alias(secret_key: &[u8; SECRET_KEY_LENGTH], public_key: &[u8], alias: &str,
-              fee: u64, timestamp: u64) -> [u8; SIGNATURE_LENGTH] {
-    sign_output(&|buf: &mut Buffer|
-        buf.byte(ALIAS).byte(V2).bytes(public_key)
-            .array(alias.as_bytes()).long(fee).long(timestamp), secret_key)
-}
-
-fn sign_output(writer: &Fn(&mut Buffer) -> &mut Buffer, secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
-    let mut buf = &mut Buffer::new();
-    let tmp = writer(&mut buf);
-    sign(tmp.as_slice(), secret_key)
-}
-
 static INITBUF: [u8; 32] = [
     0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
-
-trait Flushable {
-    fn flush(&self, sink: &mut Input) -> ();
-}
 
 struct Buffer {
     buf: Vec<u8>
@@ -271,8 +289,10 @@ mod tests {
         sk.copy_from_slice(&"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT".from_base58().unwrap().as_slice());
         let mut pk = [0u8; PUBLIC_KEY_LENGTH];
         pk.copy_from_slice("GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
-        let sig = sign_lease(&sk, &pk, 84 as u8, "3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K", 100000, 100000, 1500000000000);
+
+        let tx = Transaction::new_lease(&pk, "3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K", 100000, 84, 100000, 1500000000000);
+        let sig = tx.sign(&sk);
         println!("sig = {}", sig.to_base58());
-        assert!(sig.len() == 2);
+        assert!(sig.len() == SIGNATURE_LENGTH);
     }
 }
