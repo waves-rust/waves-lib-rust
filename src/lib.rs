@@ -28,6 +28,45 @@ const SPONSOR: u8 = 14;
 
 const V2: u8 = 2;
 
+const ADDRESS_LENGTH: usize = 26;
+
+trait Account {
+    fn public_key(&self) -> &[u8; PUBLIC_KEY_LENGTH];
+//    fn to_address(&self) -> [u8; ADDRESS_LENGTH];
+}
+
+pub struct PublicKeyAccount([u8; PUBLIC_KEY_LENGTH]);
+
+impl Account for PublicKeyAccount {
+    fn public_key(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
+        &self.0
+    }
+}
+
+pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], PublicKeyAccount);
+
+impl PrivateKeyAccount {
+    fn from_key_pair(pk: [u8; PUBLIC_KEY_LENGTH], sk: [u8; SECRET_KEY_LENGTH]) -> PrivateKeyAccount {
+        PrivateKeyAccount(sk, PublicKeyAccount(pk))
+    }
+
+    fn sign_bytes(&self, data: &[u8]) -> [u8; SIGNATURE_LENGTH] {
+        sign(data, &self.0)
+    }
+
+    fn sign_transaction<'a>(&self, tx: &'a Transaction<'a>) -> ProvenTransaction<'a> {
+        let signature = self.sign_bytes(&tx.to_bytes());
+        ProvenTransaction { tx, proofs: vec![signature.to_vec()] }
+    }
+}
+
+impl Account for PrivateKeyAccount {
+    fn public_key(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
+        self.1.public_key()
+    }
+}
+
+
 enum TransactionData<'a> {
     Issue { name: &'a str, description: &'a str, quantity: u64, decimals: u8, reissuable: bool, chain_id: u8 },
     Reissue { asset_id: &'a str, quantity: u64, reissuable: bool, chain_id: u8 },
@@ -47,9 +86,15 @@ struct Transaction<'a> {
     version: u8,
 }
 
+struct ProvenTransaction<'a> {
+    tx: &'a Transaction<'a>,
+    proofs: Vec<Vec<u8>>
+}
+
 impl <'a> Transaction<'a> {
-    pub fn new_lease(sender_public_key: &'a [u8; PUBLIC_KEY_LENGTH], recipient: &'a str, amount: u64,
+    pub fn new_lease(account: &'a Account, recipient: &'a str, amount: u64,
                      chain_id: u8, fee: u64, timestamp: u64) -> Transaction<'a> {
+        let sender_public_key = account.public_key();
         Transaction {
             data: TransactionData::Lease { recipient, amount, chain_id },
             fee,
@@ -72,7 +117,7 @@ impl <'a> Transaction<'a> {
         }
     }
 
-    pub fn sign(&self, secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = &mut Buffer::new();
         buf.byte(self.type_id).byte(self.version);
         match self.data {
@@ -102,7 +147,11 @@ impl <'a> Transaction<'a> {
                 buf.bytes(self.sender_public_key).array(alias.as_bytes())
                     .long(self.fee).long(self.timestamp),
         };
-        sign(buf.as_slice(), secret_key)
+        Vec::from(buf.as_slice())
+    }
+
+    pub fn with_proofs(&'a self, proofs: Vec<Vec<u8>>) -> ProvenTransaction<'a> {
+        ProvenTransaction { tx: self, proofs }
     }
 }
 
@@ -290,8 +339,10 @@ mod tests {
         let mut pk = [0u8; PUBLIC_KEY_LENGTH];
         pk.copy_from_slice("GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
 
-        let tx = Transaction::new_lease(&pk, "3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K", 100000, 84, 100000, 1500000000000);
-        let sig = tx.sign(&sk);
+        let acc = PrivateKeyAccount::from_key_pair(pk, sk);
+        let tx = Transaction::new_lease(&acc, "3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K", 100000, 84, 100000, 1500000000000);
+        let ProvenTransaction { tx, proofs } = acc.sign_transaction(&tx);
+        let sig = proofs.get(0).unwrap();
         println!("sig = {}", sig.to_base58());
         assert!(sig.len() == SIGNATURE_LENGTH);
     }
