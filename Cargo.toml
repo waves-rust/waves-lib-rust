@@ -5,8 +5,11 @@ authors = ["peterz <peterz@rambler.ru>"]
 
 [dependencies]
 base58 = "^0.1"
-curve25519-dalek = "^0.19"
-digest = "^0.7"
-ed25519-dalek = "^0.8"
 rand = "^0.4"
+
+curve25519-dalek = "^0.19"
+ed25519-dalek = "^0.8"
+
+blake2 = "^0.7"
 sha2 = "^0.7"
+sha3 = "^0.7"
