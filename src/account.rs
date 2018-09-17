@@ -9,7 +9,7 @@ use rand;
 use rand::Rng;
 use blake2::Blake2b;
 use blake2::digest::{Input, VariableOutput};
-use sha2::{Digest, Sha512};
+use sha2::{Digest, Sha256, Sha512};
 use sha3::Keccak256;
 
 const ADDRESS_VERSION: u8 = 1;
@@ -31,17 +31,17 @@ impl Address {
     }
 }
 
-pub struct PublicKeyAccount([u8; PUBLIC_KEY_LENGTH], u8);
+pub struct PublicKeyAccount([u8; PUBLIC_KEY_LENGTH]);
 
 impl PublicKeyAccount {
     pub fn to_bytes(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
         &self.0
     }
 
-    pub fn to_address(&self) -> Address {
+    pub fn to_address(&self, chain_id: u8) -> Address {
         let mut buf= [0u8; ADDRESS_LENGTH];
         buf[0] = ADDRESS_VERSION;
-        buf[1] = self.1;
+        buf[1] = chain_id;
         buf[2..22].copy_from_slice(&secure_hash(&self.0)[..20]);
         let checksum = &secure_hash(&buf[..22])[..4];
         buf[22..].copy_from_slice(checksum);
@@ -53,7 +53,19 @@ pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
 
 impl PrivateKeyAccount {
     pub fn from_key_pair(sk: [u8; SECRET_KEY_LENGTH], pk: [u8; PUBLIC_KEY_LENGTH], chain_id: u8) -> PrivateKeyAccount {
-        PrivateKeyAccount(sk, PublicKeyAccount(pk, chain_id))
+        PrivateKeyAccount(sk, PublicKeyAccount(pk))
+    }
+
+    pub fn from_seed(seed: &str) -> PrivateKeyAccount {
+        let mut sk = [0u8; SECRET_KEY_LENGTH];
+        sk.copy_from_slice(&Sha256::digest(seed.from_base58().unwrap().as_slice()));
+        sk[0]  &= 248;
+        sk[31] &= 127;
+        sk[31] |= 64;
+
+        let ed_pk = &Scalar::from_bits(sk) * &constants::ED25519_BASEPOINT_TABLE;
+        let pk = ed_pk.to_montgomery().to_bytes();
+        PrivateKeyAccount(sk, PublicKeyAccount(pk))
     }
 
     pub fn sign_bytes(&self, data: &[u8]) -> [u8; SIGNATURE_LENGTH] {
@@ -169,11 +181,10 @@ mod tests {
     }
 
     #[test]
-    fn test_public_key_to_address() {
-        let mut pk = [0u8; PUBLIC_KEY_LENGTH];
-        pk.copy_from_slice("GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
-        let account = PublicKeyAccount(pk, TESTNET);
-        let Address(addr) = account.to_address();
-        assert_eq!(addr, "3N9gDFq8tKFhBDBTQxR3zqvtpXjw5wW3syA".from_base58().unwrap().as_slice())
+    fn test_private_key_from_seed() {
+        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("waves");
+        assert_eq!(sk, "4oaS7VtASCY9KrVAabrcgKWDWcZ7dKb13UKE9zFcpWWS".from_base58().unwrap().as_slice());
+        assert_eq!(acc.to_bytes(), "2GRyKXShb8aJLAm9qUBzeesfXvvVcEbnmeiioD8fh2UL".from_base58().unwrap().as_slice());
+        assert_eq!(acc.to_address(TESTNET).0, "3N9QEKMtfcYDPHgn53TCF9tGkmTwDdq6qxT".from_base58().unwrap().as_slice());
     }
 }
