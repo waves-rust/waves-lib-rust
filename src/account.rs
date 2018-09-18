@@ -1,4 +1,5 @@
 use bytebuffer::Buffer;
+use transaction::{Transaction, ProvenTransaction};
 
 use base58::*;
 use curve25519_dalek::constants;
@@ -22,12 +23,22 @@ pub const TESTNET: u8 = 'T' as u8;
 pub struct Address([u8; ADDRESS_LENGTH]);
 
 impl Address {
+    pub fn chain_id(&self) -> u8 {
+        self.0[1]
+    }
+
     pub fn to_bytes(&self) -> &[u8; ADDRESS_LENGTH] {
         &self.0
     }
 
     pub fn to_string(&self) -> String {
         self.0.to_base58()
+    }
+
+    pub fn from_string(base58: &str) -> Address {
+        let mut bytes = [0u8; ADDRESS_LENGTH];
+        bytes.copy_from_slice(base58.from_base58().unwrap().as_slice());////map unwrap, handle bad length
+        Address(bytes)
     }
 }
 
@@ -52,7 +63,11 @@ impl PublicKeyAccount {
 pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
 
 impl PrivateKeyAccount {
-    pub fn from_key_pair(sk: [u8; SECRET_KEY_LENGTH], pk: [u8; PUBLIC_KEY_LENGTH], chain_id: u8) -> PrivateKeyAccount {
+    fn public_key(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
+        self.1.to_bytes()
+    }
+
+    pub fn from_key_pair(sk: [u8; SECRET_KEY_LENGTH], pk: [u8; PUBLIC_KEY_LENGTH]) -> PrivateKeyAccount {
         PrivateKeyAccount(sk, PublicKeyAccount(pk))
     }
 
@@ -72,15 +87,9 @@ impl PrivateKeyAccount {
         sign(data, &self.0)
     }
 
-//    fn sign_transaction<'a>(&self, tx: &'a Transaction<'a>) -> ProvenTransaction<'a> {
-//        let signature = self.sign_bytes(&tx.to_bytes());
-//        ProvenTransaction { tx, proofs: vec![signature.to_vec()] }
-//    }
-}
-
-impl PrivateKeyAccount {
-    fn public_key(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
-        self.1.to_bytes()
+    pub fn sign_transaction<'a>(&self, tx: &'a Transaction<'a>) -> ProvenTransaction<'a> {
+        let signature = self.sign_bytes(&tx.to_bytes());
+        ProvenTransaction { tx, proofs: vec![signature.to_vec()] }
     }
 }
 
