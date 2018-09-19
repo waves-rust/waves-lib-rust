@@ -8,5 +8,5 @@ extern crate sha3;
 
 mod bytebuffer;
 
-mod account;
-mod transaction;
+pub mod account;
+pub mod transaction;

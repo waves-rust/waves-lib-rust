@@ -1,6 +1,7 @@
 use base58::*;
+use transaction::{Asset, DataEntry};
 
-pub (crate) struct Buffer {
+pub(crate) struct Buffer {
     buf: Vec<u8>
 }
 
@@ -56,10 +57,27 @@ impl Buffer {
         self.size(arr.len()).bytes(arr)
     }
 
-    pub fn asset_id(&mut self, asset_id: Option<&[u8]>) -> &mut Buffer {
-        match asset_id {
-            Some(id) => self.byte(1).bytes(id),
+    pub fn array_opt(&mut self, arr: Option<&[u8]>) -> &mut Buffer {
+        self.array(arr.unwrap_or(&[]))
+    }
+
+    pub fn asset(&mut self, asset: &Asset) -> &mut Buffer {
+        self.bytes(&asset.to_bytes())
+    }
+
+    pub fn asset_opt(&mut self, asset: &Option<&Asset>) -> &mut Buffer {
+        match asset {
+            Some(aid) => self.byte(1).asset(aid),
             None => self.byte(0)
+        }
+    }
+
+    pub fn data_entry(&mut self, e: &DataEntry) -> &mut Buffer {
+        match *e {
+            DataEntry::Integer(key, val) => self.array(key.as_bytes()).byte(0).long(val),
+            DataEntry::Boolean(key, val) => self.array(key.as_bytes()).byte(1).boolean(val),
+            DataEntry::Binary(key, val) => self.array(key.as_bytes()).byte(2).array(val),
+            DataEntry::String(key, val) => self.array(key.as_bytes()).byte(3).array(val.as_bytes()),
         }
     }
 

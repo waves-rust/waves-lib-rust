@@ -63,8 +63,8 @@ impl PublicKeyAccount {
 pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
 
 impl PrivateKeyAccount {
-    fn public_key(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
-        self.1.to_bytes()
+    pub fn public_key(&self) -> &PublicKeyAccount {
+        &self.1
     }
 
     pub fn from_key_pair(sk: [u8; SECRET_KEY_LENGTH], pk: [u8; PUBLIC_KEY_LENGTH]) -> PrivateKeyAccount {
@@ -87,7 +87,7 @@ impl PrivateKeyAccount {
         sign(data, &self.0)
     }
 
-    pub fn sign_transaction<'a>(&self, tx: &'a Transaction<'a>) -> ProvenTransaction<'a> {
+    pub fn sign_transaction<'a>(&self, tx: Transaction<'a>) -> ProvenTransaction<'a> {
         let signature = self.sign_bytes(&tx.to_bytes());
         ProvenTransaction { tx, proofs: vec![signature.to_vec()] }
     }
@@ -145,7 +145,7 @@ fn sig_verify(message: &[u8], public_key: &[u8; PUBLIC_KEY_LENGTH], signature: &
         .is_ok()
 }
 
-fn secure_hash(message: &[u8]) -> Vec<u8> {
+pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {////mv where?
     let mut blake = <Blake2b as VariableOutput>::new(32).unwrap();
     blake.process(message);
     let mut buf = [0u8; 32];
