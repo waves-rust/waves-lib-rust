@@ -42,7 +42,7 @@ impl Address {
     }
 }
 
-pub struct PublicKeyAccount([u8; PUBLIC_KEY_LENGTH]);
+pub struct PublicKeyAccount(pub [u8; PUBLIC_KEY_LENGTH]);
 
 impl PublicKeyAccount {
     pub fn to_bytes(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
@@ -145,12 +145,15 @@ fn sig_verify(message: &[u8], public_key: &[u8; PUBLIC_KEY_LENGTH], signature: &
         .is_ok()
 }
 
-pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {////mv where?
+pub(crate) fn blake_hash(message: &[u8]) -> Vec<u8> {////mv where?
     let mut blake = <Blake2b as VariableOutput>::new(32).unwrap();
     blake.process(message);
     let mut buf = [0u8; 32];
-    blake.variable_result(&mut buf).unwrap();
-    Keccak256::digest(&buf).to_vec()
+    blake.variable_result(&mut buf).unwrap().to_vec()
+}
+
+pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {////mv where? return [u8]?
+    Keccak256::digest(&blake_hash(message)).to_vec()
 }
 
 #[cfg(test)]
@@ -183,10 +186,14 @@ mod tests {
     }
 
     #[test]
-    fn test_secure_hash() {
-        let msg = "baffled bobcat's been beaten by black bears".as_bytes();
-        let expected = "4FSFJanCrKoB15fYmjs3FzhPLNyMj3i7xJjtynbyZtm8".from_base58().unwrap();
-        assert_eq!(secure_hash(msg), expected.as_slice());
+    fn test_hashes() {
+        let blakeIn = "blake".as_bytes();
+        let blakeOut = "HRFQW3JNhUYcYXyKZJ1ZefKDhZkLKJk1dzzy3PzYPr3y".from_base58().unwrap();
+        assert_eq!(blake_hash(blakeIn), blakeOut.as_slice());
+
+        let secureIn = "baffled bobcat's been beaten by black bears".as_bytes();
+        let secureOut = "4FSFJanCrKoB15fYmjs3FzhPLNyMj3i7xJjtynbyZtm8".from_base58().unwrap();
+        assert_eq!(secure_hash(secureIn), secureOut.as_slice());
     }
 
     #[test]
