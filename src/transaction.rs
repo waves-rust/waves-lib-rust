@@ -70,6 +70,15 @@ pub enum TransactionData<'a> {
     Sponsor { asset: &'a Asset, rate: Option<u64> },
 }
 
+/// A transaction. Data specific to a particular transaction type are stored in the `data` field.
+/// # Usage
+/// ```
+/// use waves::account::{PrivateKeyAccount, TESTNET};
+/// use waves::transaction::*;
+/// let account = PrivateKeyAccount::from_seed("seed");
+/// let tx = Transaction::new_alias(&account.public_key(), "rhino", TESTNET, 100000, 1536000000000);
+/// let signed_tx = account.sign_transaction(tx);
+/// ```
 pub struct Transaction<'a> {
     data: TransactionData<'a>,
     fee: u64,
@@ -262,6 +271,7 @@ impl <'a> Transaction<'a> {
         Vec::from(buf.as_slice())
     }
 
+    /// Returns transaction ID
     pub fn id(&self) -> TransactionId {
         let bytes = match self.data {
             Alias { alias, chain_id } => {
@@ -277,11 +287,14 @@ impl <'a> Transaction<'a> {
         TransactionId::new(id)
     }
 
+    /// Returns a ProvenTransaction with the given proofs
     pub fn with_proofs(self, proofs: Vec<Vec<u8>>) -> ProvenTransaction<'a> {
         ProvenTransaction { tx: self, proofs }
     }
 }
 
+/// Transaction with proofs. Proofs are byte vectors at most 64 bytes long, and maximum number of
+/// proofs is 8.
 pub struct ProvenTransaction<'a> {
     pub tx: Transaction<'a>,
     pub proofs: Vec<Vec<u8>>

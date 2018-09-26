@@ -60,6 +60,14 @@ impl PublicKeyAccount {
     }
 }
 
+/// An account possessing a private key. `PrivateKeyAccount` is tied to an address and can sign
+/// transactions.
+/// # Usage
+/// ```
+/// use waves::account::{PrivateKeyAccount, TESTNET};
+/// let account = PrivateKeyAccount::from_seed("seed");
+/// println!("my address: {}", account.public_key().to_address(TESTNET).to_string());
+/// ```
 pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
 
 impl PrivateKeyAccount {
@@ -187,13 +195,13 @@ mod tests {
 
     #[test]
     fn test_hashes() {
-        let blakeIn = "blake".as_bytes();
-        let blakeOut = "HRFQW3JNhUYcYXyKZJ1ZefKDhZkLKJk1dzzy3PzYPr3y".from_base58().unwrap();
-        assert_eq!(blake_hash(blakeIn), blakeOut.as_slice());
+        let blake_in = "blake".as_bytes();
+        let blake_out = "HRFQW3JNhUYcYXyKZJ1ZefKDhZkLKJk1dzzy3PzYPr3y".from_base58().unwrap();
+        assert_eq!(blake_hash(blake_in), blake_out.as_slice());
 
-        let secureIn = "baffled bobcat's been beaten by black bears".as_bytes();
-        let secureOut = "4FSFJanCrKoB15fYmjs3FzhPLNyMj3i7xJjtynbyZtm8".from_base58().unwrap();
-        assert_eq!(secure_hash(secureIn), secureOut.as_slice());
+        let secure_in = "baffled bobcat's been beaten by black bears".as_bytes();
+        let secure_out = "4FSFJanCrKoB15fYmjs3FzhPLNyMj3i7xJjtynbyZtm8".from_base58().unwrap();
+        assert_eq!(secure_hash(secure_in), secure_out.as_slice());
     }
 
     #[test]

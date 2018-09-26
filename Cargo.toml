@@ -1,6 +1,6 @@
 [package]
 name = "waves"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["peterz <peterz@rambler.ru>"]
 description = "Library to work with Waves blockchain (https://wavesplatform.com)"
 license = "MIT"
