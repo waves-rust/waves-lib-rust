@@ -1,5 +1,5 @@
 # Acryl
-A Rust interface to the Acryl blockchain
+A Rust interface to the [Acryl blockchain](https://acrylplatform.com)
 
 # Usage
 ```rust
