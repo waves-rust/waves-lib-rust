@@ -1,5 +1,5 @@
 use base58::*;
-use transaction::{Asset, DataEntry};
+use crate::transaction::{Asset, DataEntry};
 
 pub(crate) struct Buffer {
     buf: Vec<u8>

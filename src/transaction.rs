@@ -1,5 +1,5 @@
-use account::{Address, PublicKeyAccount, TESTNET, blake_hash};
-use bytebuffer::Buffer;
+use crate::account::{Address, PublicKeyAccount, TESTNET, blake_hash};
+use crate::bytebuffer::Buffer;
 use base58::*;
 
 enum Type {
@@ -303,7 +303,7 @@ pub struct ProvenTransaction<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use account::{Address, PrivateKeyAccount};
+    use crate::account::{Address, PrivateKeyAccount};
     use base58::*;
     use ed25519_dalek::*;
 
