@@ -1,5 +1,5 @@
-use bytebuffer::Buffer;
-use transaction::{Transaction, ProvenTransaction};
+use crate::bytebuffer::Buffer;
+use crate::transaction::{Transaction, ProvenTransaction};
 
 use base58::*;
 use curve25519_dalek::constants;
@@ -17,8 +17,8 @@ const ADDRESS_VERSION: u8 = 1;
 const ADDRESS_LENGTH: usize = 26;
 const HASH_LENGTH: usize = 32;
 
-pub const MAINNET: u8 = 'W' as u8;
-pub const TESTNET: u8 = 'T' as u8;
+pub const MAINNET: u8 = 'A' as u8;
+pub const TESTNET: u8 = 'K' as u8;
 
 pub struct Address([u8; ADDRESS_LENGTH]);
 
@@ -149,7 +149,7 @@ fn sig_verify(message: &[u8], public_key: &[u8; PUBLIC_KEY_LENGTH], signature: &
     ed_pubkey[31] |= sign;
 
     PublicKey::from_bytes(&ed_pubkey).unwrap()
-        .verify::<Sha512>(message,&Signature::from_bytes(&sig).unwrap())
+        .verify(message,&Signature::from_bytes(&sig).unwrap())
         .is_ok()
 }
 
@@ -206,9 +206,9 @@ mod tests {
 
     #[test]
     fn test_private_key_from_seed() {
-        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("acryl");
-        assert_eq!(sk, "4oaS7VtASCY9KrVAabrcgKWDWcZ7dKb13UKE9zFcpWWS".from_base58().unwrap().as_slice());
-        assert_eq!(acc.to_bytes(), "2GRyKXShb8aJLAm9qUBzeesfXvvVcEbnmeiioD8fh2UL".from_base58().unwrap().as_slice());
-        assert_eq!(acc.to_address(TESTNET).0, "3N9QEKMtfcYDPHgn53TCF9tGkmTwDdq6qxT".from_base58().unwrap().as_slice());
+        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("test");
+        assert_eq!(sk, "5sJHxDyR79erksKWynMWLjWzWwiTx48HFXyNravvb4iz".from_base58().unwrap().as_slice());
+        assert_eq!(acc.to_bytes(), "GoToDxRVGy2zvLQUFTW9bF1sgKUdCB4Go9xUjZpbNh3r".from_base58().unwrap().as_slice());
+        assert_eq!(acc.to_address(TESTNET).0, "3JRLk6mzxCdb6o1TXzr6tNrcmyLntG2C731".from_base58().unwrap().as_slice());
     }
 }
