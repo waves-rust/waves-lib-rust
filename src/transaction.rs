@@ -73,8 +73,8 @@ pub enum TransactionData<'a> {
 /// A transaction. Data specific to a particular transaction type are stored in the `data` field.
 /// # Usage
 /// ```
-/// use waves::account::{PrivateKeyAccount, TESTNET};
-/// use waves::transaction::*;
+/// use acryl::account::{PrivateKeyAccount, TESTNET};
+/// use acryl::transaction::*;
 /// let account = PrivateKeyAccount::from_seed("seed");
 /// let tx = Transaction::new_alias(&account.public_key(), "rhino", TESTNET, 100000, 1536000000000);
 /// let signed_tx = account.sign_transaction(tx);

@@ -1,16 +1,17 @@
 [package]
-name = "waves"
-version = "0.2.0"
-authors = ["peterz <peterz@rambler.ru>"]
-description = "Library to work with Waves blockchain (https://wavesplatform.com)"
+name = "acryl"
+version = "0.1.0"
+authors = ["DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
+edition = "2018"
+description = "Library to work with Acryl blockchain (https://acrylplatform.com)"
 license = "MIT"
 
 [dependencies]
-base58 = "^0.1"
-rand = "^0.4"
+base58 = "0.1.0"
+rand = "0.7.3"
 
-blake2 = "^0.7"
-curve25519-dalek = "^0.19"
-ed25519-dalek = "^0.8"
-sha2 = "^0.7"
-sha3 = "^0.7"
+blake2 = "0.8.1"
+curve25519-dalek = "2.0.0"
+ed25519-dalek = "0.9.1"
+sha2 = "0.8.1"
+sha3 = "0.8.2"

@@ -1,15 +1,15 @@
-# Waves
-A Rust interface to the Waves blockchain
+# Acryl
+A Rust interface to the Acryl blockchain
 
 # Usage
 ```rust
 extern crate base58;
-extern crate waves;
+extern crate acryl;
 
 use base58::*;
 use std::time::{SystemTime, UNIX_EPOCH};
-use waves::account::{PrivateKeyAccount, TESTNET};
-use waves::transaction::*;
+use acryl::account::{PrivateKeyAccount, TESTNET};
+use acryl::transaction::*;
 
 fn main() {
     let account = PrivateKeyAccount::from_seed("seed");

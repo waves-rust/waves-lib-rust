@@ -64,7 +64,7 @@ impl PublicKeyAccount {
 /// transactions.
 /// # Usage
 /// ```
-/// use waves::account::{PrivateKeyAccount, TESTNET};
+/// use acryl::account::{PrivateKeyAccount, TESTNET};
 /// let account = PrivateKeyAccount::from_seed("seed");
 /// println!("my address: {}", account.public_key().to_address(TESTNET).to_string());
 /// ```
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_private_key_from_seed() {
-        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("waves");
+        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("acryl");
         assert_eq!(sk, "4oaS7VtASCY9KrVAabrcgKWDWcZ7dKb13UKE9zFcpWWS".from_base58().unwrap().as_slice());
         assert_eq!(acc.to_bytes(), "2GRyKXShb8aJLAm9qUBzeesfXvvVcEbnmeiioD8fh2UL".from_base58().unwrap().as_slice());
         assert_eq!(acc.to_address(TESTNET).0, "3N9QEKMtfcYDPHgn53TCF9tGkmTwDdq6qxT".from_base58().unwrap().as_slice());
