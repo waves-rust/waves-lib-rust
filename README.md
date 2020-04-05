@@ -3,9 +3,6 @@ A Rust interface to the [Acryl blockchain](https://acrylplatform.com)
 
 # Usage
 ```rust
-extern crate base58;
-extern crate acryl;
-
 use base58::*;
 use std::time::{SystemTime, UNIX_EPOCH};
 use acryl::account::{PrivateKeyAccount, TESTNET};
