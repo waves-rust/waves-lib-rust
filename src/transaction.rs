@@ -117,7 +117,7 @@ pub enum TransactionData<'a> {
         asset: &'a Asset,
         script: Option<&'a [u8]>,
         chain_id: u8,
-    }
+    },
 }
 
 /// A transaction. Data specific to a particular transaction type are stored in the `data` field.
@@ -406,17 +406,19 @@ impl<'a> Transaction<'a> {
                 chain_id,
                 script,
             } => {
-                buf.byte(chain_id).bytes(self.sender_public_key.to_bytes()).array(name.as_bytes())
+                buf.byte(chain_id)
+                    .bytes(self.sender_public_key.to_bytes())
+                    .array(name.as_bytes())
                     .array(description.as_bytes())
                     .long(quantity)
                     .byte(decimals)
                     .boolean(reissuable)
                     .long(self.fee)
                     .long(self.timestamp);
-                    match script {
-                        Some(bytes) => buf.byte(1).array(bytes),
-                        None => buf.byte(0),
-                    }
+                match script {
+                    Some(bytes) => buf.byte(1).array(bytes),
+                    None => buf.byte(0),
+                }
             }
             Transfer {
                 recipient,
@@ -524,7 +526,9 @@ impl<'a> Transaction<'a> {
                 script,
                 chain_id,
             } => {
-                buf.byte(chain_id).bytes(self.sender_public_key.to_bytes()).asset(asset);
+                buf.byte(chain_id)
+                    .bytes(self.sender_public_key.to_bytes())
+                    .asset(asset);
                 match script {
                     Some(bytes) => buf.byte(1).array(bytes),
                     None => buf.byte(0),
