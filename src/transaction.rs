@@ -115,7 +115,7 @@ pub enum TransactionData<'a> {
         rate: Option<u64>,
     },
     SetAssetScript {
-        asset: Option<&'a Asset>,
+        asset: &'a Asset,
         script: Option<&'a [u8]>,
         chain_id: u8,
     },
@@ -159,6 +159,7 @@ impl<'a> Transaction<'a> {
         chain_id: u8,
         fee: u64,
         timestamp: u64,
+        script: Option<&'a [u8]>,
     ) -> Transaction<'a> {
         Transaction {
             data: Issue {
@@ -168,11 +169,38 @@ impl<'a> Transaction<'a> {
                 decimals,
                 reissuable,
                 chain_id,
+                script,
             },
             fee,
             timestamp,
             sender_public_key,
             type_id: Type::Issue as u8,
+            version: Version::V2 as u8,
+        }
+    }
+
+    pub fn new_transfer(
+        sender_public_key: &'a PublicKeyAccount,
+        recipient: &'a Address,
+        asset: Option<&'a Asset>,
+        amount: u64,
+        fee_asset: Option<&'a Asset>,
+        fee: u64,
+        attachment: Option<&'a str>,
+        timestamp: u64,
+    ) -> Transaction<'a> {
+        Transaction {
+            data: Transfer {
+                recipient,
+                asset,
+                amount,
+                fee_asset,
+                attachment,
+            },
+            fee,
+            timestamp,
+            sender_public_key,
+            type_id: Type::Transfer as u8,
             version: Version::V2 as u8,
         }
     }
@@ -219,32 +247,6 @@ impl<'a> Transaction<'a> {
             timestamp,
             sender_public_key,
             type_id: Type::Burn as u8,
-            version: Version::V2 as u8,
-        }
-    }
-
-    pub fn new_transfer(
-        sender_public_key: &'a PublicKeyAccount,
-        recipient: &'a Address,
-        asset: Option<&'a Asset>,
-        amount: u64,
-        fee_asset: Option<&'a Asset>,
-        fee: u64,
-        attachment: Option<&'a str>,
-        timestamp: u64,
-    ) -> Transaction<'a> {
-        Transaction {
-            data: Transfer {
-                recipient,
-                asset,
-                amount,
-                fee_asset,
-                attachment,
-            },
-            fee,
-            timestamp,
-            sender_public_key,
-            type_id: Type::Transfer as u8,
             version: Version::V2 as u8,
         }
     }
@@ -377,6 +379,50 @@ impl<'a> Transaction<'a> {
         }
     }
 
+    pub fn new_set_asset_script(
+        sender_public_key: &'a PublicKeyAccount,
+        asset: &'a Asset,
+        script: Option<&'a [u8]>,
+        chain_id: u8,
+        fee: u64,
+        timestamp: u64,
+    ) -> Transaction<'a> {
+        Transaction {
+            data: SetAssetScript {
+                asset,
+                script,
+                chain_id,
+            },
+            fee,
+            timestamp,
+            sender_public_key,
+            type_id: Type::SetAssetScript as u8,
+            version: Version::V1 as u8,
+        }
+    }
+
+    pub fn new_invoke_script(
+        sender_public_key: &'a PublicKeyAccount,
+        dapp: &'a Address,
+        fee_asset: Option<&'a Asset>,
+        chain_id: u8,
+        fee: u64,
+        timestamp: u64,
+    ) -> Transaction<'a> {
+        Transaction {
+            data: InvokeScript {
+                dapp,
+                fee_asset,
+                chain_id,
+            },
+            fee,
+            timestamp,
+            sender_public_key,
+            type_id: Type::InvokeScript as u8,
+            version: Version::V1 as u8,
+        }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = Buffer::new();
         buf.byte(self.type_id).byte(self.version);
@@ -388,17 +434,22 @@ impl<'a> Transaction<'a> {
                 decimals,
                 reissuable,
                 chain_id,
-            } => buf
-                .byte(chain_id)
-                .bytes(self.sender_public_key.to_bytes())
-                .array(name.as_bytes())
-                .array(description.as_bytes())
-                .long(quantity)
-                .byte(decimals)
-                .boolean(reissuable)
-                .long(self.fee)
-                .long(self.timestamp)
-                .byte(0),
+                script,
+            } => {
+                buf.byte(chain_id).bytes(self.sender_public_key.to_bytes());
+                match script {
+                    Some(bytes) => buf.byte(1).array(bytes),
+                    None => buf.byte(0),
+                };
+                buf.array(name.as_bytes())
+                    .array(description.as_bytes())
+                    .long(quantity)
+                    .byte(decimals)
+                    .boolean(reissuable)
+                    .long(self.fee)
+                    .long(self.timestamp)
+                    .byte(0)
+            }
             Reissue {
                 asset,
                 quantity,
@@ -558,7 +609,7 @@ mod tests {
 
         check_hash(
             &Transaction::new_issue(
-                &pk, "coin", "coin", 100000000, 8, false, TESTNET, 100000, ts,
+                &pk, "coin", "coin", 100000000, 8, false, TESTNET, 100000, ts, None,
             ),
             "AkgNv2ULydQSFSaxrDj2ufsZmMfd8qD6VGNKsSiPZwxC",
         );
