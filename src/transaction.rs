@@ -15,7 +15,6 @@ enum Type {
     SetScript = 13,
     Sponsor = 14,
     SetAssetScript = 15,
-    InvokeScript = 16,
 }
 
 enum Version {
@@ -55,21 +54,6 @@ pub enum DataEntry<'a> {
     Boolean(&'a str, bool),
     Binary(&'a str, &'a Vec<u8>),
     String(&'a str, &'a str),
-}
-
-pub struct Payment<'a> {
-    amount: u64,
-    asset: &'a Asset,
-}
-
-pub struct Args<'a> {
-    type_val: &'a str,
-    value: DataEntry<'a>
-}
-
-pub struct Call<'a> {
-    function: &'a str,
-    args: Args<'a>,
 }
 
 pub enum TransactionData<'a> {
@@ -133,14 +117,7 @@ pub enum TransactionData<'a> {
         asset: &'a Asset,
         script: Option<&'a [u8]>,
         chain_id: u8,
-    },
-    InvokeScript {
-        dapp: &'a Address,
-        call: Option<&'a Call<'a>>,
-        payment: Option<&'a Payment<'a>>,
-        fee_asset: Option<&'a Asset>,
-        chain_id: u8,
-    },
+    }
 }
 
 /// A transaction. Data specific to a particular transaction type are stored in the `data` field.
@@ -412,32 +389,6 @@ impl<'a> Transaction<'a> {
             timestamp,
             sender_public_key,
             type_id: Type::SetAssetScript as u8,
-            version: Version::V1 as u8,
-        }
-    }
-
-    pub fn new_invoke_script(
-        sender_public_key: &'a PublicKeyAccount,
-        dapp: &'a Address,
-        call: Option<&'a Call<'a>>,
-        payment: Option<&'a Payment<'a>>,
-        fee_asset: Option<&'a Asset>,
-        chain_id: u8,
-        fee: u64,
-        timestamp: u64,
-    ) -> Transaction<'a> {
-        Transaction {
-            data: InvokeScript {
-                dapp,
-                call,
-                payment,
-                fee_asset,
-                chain_id,
-            },
-            fee,
-            timestamp,
-            sender_public_key,
-            type_id: Type::InvokeScript as u8,
             version: Version::V1 as u8,
         }
     }
