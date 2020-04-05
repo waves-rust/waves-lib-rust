@@ -1,4 +1,4 @@
-use crate::account::{blake_hash, Address, PublicKeyAccount, TESTNET};
+use crate::account::{blake_hash, Address, PublicKeyAccount};
 use crate::bytebuffer::Buffer;
 use base58::*;
 
@@ -525,8 +525,7 @@ pub struct ProvenTransaction<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::account::{Address, PrivateKeyAccount};
-    use base58::*;
+    use crate::account::{Address, PrivateKeyAccount, TESTNET};
     use ed25519_dalek::*;
 
     #[test]
@@ -632,7 +631,7 @@ mod tests {
         let sig = proofs.get(0).unwrap();
         assert_eq!(sig.len(), SIGNATURE_LENGTH);
 
-        let ProvenTransaction { tx, proofs } = tx.with_proofs(vec![vec![1, 2, 3]]);
+        let ProvenTransaction { tx: _, proofs } = tx.with_proofs(vec![vec![1, 2, 3]]);
         assert_eq!(proofs.len(), 1);
         let sig = proofs.get(0).unwrap();
         assert_eq!(*sig, vec![1, 2, 3]);
