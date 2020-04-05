@@ -65,6 +65,14 @@ pub enum TransactionData<'a> {
         decimals: u8,
         reissuable: bool,
         chain_id: u8,
+        script: Option<&'a [u8]>,
+    },
+    Transfer {
+        recipient: &'a Address,
+        asset: Option<&'a Asset>,
+        amount: u64,
+        fee_asset: Option<&'a Asset>,
+        attachment: Option<&'a str>,
     },
     Reissue {
         asset: &'a Asset,
@@ -76,13 +84,6 @@ pub enum TransactionData<'a> {
         asset: &'a Asset,
         quantity: u64,
         chain_id: u8,
-    },
-    Transfer {
-        recipient: &'a Address,
-        asset: Option<&'a Asset>,
-        amount: u64,
-        fee_asset: Option<&'a Asset>,
-        attachment: Option<&'a str>,
     },
     Lease {
         recipient: &'a Address,
@@ -112,6 +113,18 @@ pub enum TransactionData<'a> {
     Sponsor {
         asset: &'a Asset,
         rate: Option<u64>,
+    },
+    SetAssetScript {
+        asset: Option<&'a Asset>,
+        script: Option<&'a [u8]>,
+        chain_id: u8,
+    },
+    InvokeScript {
+        dapp: &'a Address,
+        // call: Option<&'a >,
+        // payment: Option<&'a >,
+        fee_asset: Option<&'a Asset>,
+        chain_id: u8,
     },
 }
 
