@@ -594,14 +594,6 @@ mod tests {
             "AkgNv2ULydQSFSaxrDj2ufsZmMfd8qD6VGNKsSiPZwxC",
         );
         check_hash(
-            &Transaction::new_reissue(&pk, &asset, 100000000, false, TESTNET, fee, ts),
-            "8KC9vS4WswhfccZygjZVHVzsgo8HtuuxmFCAa6BQvmQK",
-        );
-        check_hash(
-            &Transaction::new_burn(&pk, &asset, 100000000, TESTNET, fee, ts),
-            "8kwwFWMKuPbR5bi8sf27dQegifxRNXjVx89URgMjYAjJ",
-        );
-        check_hash(
             &Transaction::new_transfer(
                 &pk,
                 &recipient,
@@ -613,6 +605,14 @@ mod tests {
                 ts,
             ),
             "4xKPSytfy69czvTJdHH1tcduvkjNP6CY7Zcqpz3mgZPd",
+        );
+        check_hash(
+            &Transaction::new_reissue(&pk, &asset, 100000000, false, TESTNET, fee, ts),
+            "8KC9vS4WswhfccZygjZVHVzsgo8HtuuxmFCAa6BQvmQK",
+        );
+        check_hash(
+            &Transaction::new_burn(&pk, &asset, 100000000, TESTNET, fee, ts),
+            "8kwwFWMKuPbR5bi8sf27dQegifxRNXjVx89URgMjYAjJ",
         );
         check_hash(
             &Transaction::new_lease(&pk, &recipient, 10, TESTNET, fee, ts),
@@ -663,6 +663,10 @@ mod tests {
         check_hash(
             &Transaction::new_sponsor(&pk, &asset, Some(100), fee, ts),
             "9zmHx3fyXz7pW6bRazPP28PGjnM8XjoHuyjzXCMHE2PY",
+        );
+        check_hash(
+            &Transaction::new_set_asset_script(&pk, &asset, None, TESTNET, fee, ts),
+            "8MGgNDBgvEAW5ZQAG4p1bMK2zsnxUX6T5DwmcSM3F7Bh",
         );
     }
 
