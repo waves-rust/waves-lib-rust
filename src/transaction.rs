@@ -57,6 +57,21 @@ pub enum DataEntry<'a> {
     String(&'a str, &'a str),
 }
 
+pub struct Payment<'a> {
+    amount: u64,
+    asset: &'a Asset,
+}
+
+pub struct Args<'a> {
+    type_val: &'a str,
+    value: DataEntry<'a>
+}
+
+pub struct Call<'a> {
+    function: &'a str,
+    args: Args<'a>,
+}
+
 pub enum TransactionData<'a> {
     Issue {
         name: &'a str,
@@ -121,8 +136,8 @@ pub enum TransactionData<'a> {
     },
     InvokeScript {
         dapp: &'a Address,
-        // call: Option<&'a >,
-        // payment: Option<&'a >,
+        call: Option<&'a Call<'a>>,
+        payment: Option<&'a Payment<'a>>,
         fee_asset: Option<&'a Asset>,
         chain_id: u8,
     },
@@ -404,6 +419,8 @@ impl<'a> Transaction<'a> {
     pub fn new_invoke_script(
         sender_public_key: &'a PublicKeyAccount,
         dapp: &'a Address,
+        call: Option<&'a Call<'a>>,
+        payment: Option<&'a Payment<'a>>,
         fee_asset: Option<&'a Asset>,
         chain_id: u8,
         fee: u64,
@@ -412,6 +429,8 @@ impl<'a> Transaction<'a> {
         Transaction {
             data: InvokeScript {
                 dapp,
+                call,
+                payment,
                 fee_asset,
                 chain_id,
             },
@@ -436,20 +455,33 @@ impl<'a> Transaction<'a> {
                 chain_id,
                 script,
             } => {
-                buf.byte(chain_id).bytes(self.sender_public_key.to_bytes());
-                match script {
-                    Some(bytes) => buf.byte(1).array(bytes),
-                    None => buf.byte(0),
-                };
-                buf.array(name.as_bytes())
+                buf.byte(chain_id).bytes(self.sender_public_key.to_bytes()).array(name.as_bytes())
                     .array(description.as_bytes())
                     .long(quantity)
                     .byte(decimals)
                     .boolean(reissuable)
                     .long(self.fee)
-                    .long(self.timestamp)
-                    .byte(0)
+                    .long(self.timestamp);
+                    match script {
+                        Some(bytes) => buf.byte(1).array(bytes),
+                        None => buf.byte(0),
+                    }
             }
+            Transfer {
+                recipient,
+                ref asset,
+                amount,
+                ref fee_asset,
+                attachment,
+            } => buf
+                .bytes(self.sender_public_key.to_bytes())
+                .asset_opt(&asset)
+                .asset_opt(&fee_asset)
+                .long(self.timestamp)
+                .long(amount)
+                .long(self.fee)
+                .recipient(recipient.chain_id(), &recipient.to_string())
+                .array_opt(attachment.map(|s| s.as_bytes())),
             Reissue {
                 asset,
                 quantity,
@@ -474,21 +506,6 @@ impl<'a> Transaction<'a> {
                 .long(quantity)
                 .long(self.fee)
                 .long(self.timestamp),
-            Transfer {
-                recipient,
-                ref asset,
-                amount,
-                ref fee_asset,
-                attachment,
-            } => buf
-                .bytes(self.sender_public_key.to_bytes())
-                .asset_opt(&asset)
-                .asset_opt(&fee_asset)
-                .long(self.timestamp)
-                .long(amount)
-                .long(self.fee)
-                .recipient(recipient.chain_id(), &recipient.to_string())
-                .array_opt(attachment.map(|s| s.as_bytes())),
             Lease {
                 recipient,
                 amount,
@@ -551,6 +568,18 @@ impl<'a> Transaction<'a> {
                 .long(rate.unwrap_or(0))
                 .long(self.fee)
                 .long(self.timestamp),
+            SetAssetScript {
+                asset,
+                script,
+                chain_id,
+            } => {
+                buf.byte(chain_id).bytes(self.sender_public_key.to_bytes()).asset(asset);
+                match script {
+                    Some(bytes) => buf.byte(1).array(bytes),
+                    None => buf.byte(0),
+                };
+                buf.long(self.fee).long(self.timestamp)
+            }
         };
         Vec::from(buf.as_slice())
     }
