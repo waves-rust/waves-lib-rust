@@ -4,16 +4,18 @@ use base58::*;
 
 enum Type {
     Issue = 3,
-    Transfer,
-    Reissue,
-    Burn,
+    Transfer = 4,
+    Reissue = 5,
+    Burn = 6,
     Lease = 8,
-    LeaseCancel,
-    Alias,
-    MassTransfer,
-    Data,
-    SetScript,
-    Sponsor,
+    LeaseCancel = 9,
+    Alias = 10,
+    MassTransfer = 11,
+    Data = 12,
+    SetScript = 13,
+    Sponsor = 14,
+    SetAssetScript = 15,
+    InvokeScript = 16,
 }
 
 enum Version {
