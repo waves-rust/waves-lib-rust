@@ -20,7 +20,7 @@ enum Type {
 
 enum Version {
     V1 = 1,
-    V2,
+    V2 = 2,
 }
 
 const HASH_LENGTH: usize = 32;
