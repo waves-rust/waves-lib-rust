@@ -29,8 +29,8 @@ pub fn sig_verify(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use base58::*;
     use crate::account::*;
+    use base58::*;
 
     #[test]
     fn test_sig_roundtrip() {
