@@ -1,11 +1,9 @@
-use crate::bytebuffer::Buffer;
 use crate::transaction::{ProvenTransaction, Transaction};
 
 use base58::*;
 use blake2::digest::{Input, VariableOutput};
 use blake2::Blake2b;
 use curve25519_dalek::constants;
-use curve25519_dalek::montgomery::MontgomeryPoint;
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::*;
 use rand;
@@ -15,11 +13,13 @@ use sha3::Keccak256;
 
 const ADDRESS_VERSION: u8 = 1;
 const ADDRESS_LENGTH: usize = 26;
-const HASH_LENGTH: usize = 32;
 
+/// MAINNET chainID
 pub const MAINNET: u8 = 'A' as u8;
+/// TESTNET chainID
 pub const TESTNET: u8 = 'K' as u8;
 
+/// An account possessing a address.
 pub struct Address([u8; ADDRESS_LENGTH]);
 
 impl Address {
@@ -42,6 +42,7 @@ impl Address {
     }
 }
 
+/// An account possessing a public key. Using `PublicKeyAccount` you can get the address.
 pub struct PublicKeyAccount(pub [u8; PUBLIC_KEY_LENGTH]);
 
 impl PublicKeyAccount {
@@ -112,7 +113,7 @@ static INITBUF: [u8; 32] = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 ];
 
-fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
+pub(crate) fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
     let mut hash = Sha512::default();
     hash.input(&INITBUF);
 
@@ -147,30 +148,6 @@ fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_
     result
 }
 
-fn sig_verify(
-    message: &[u8],
-    public_key: &[u8; PUBLIC_KEY_LENGTH],
-    signature: &[u8; SIGNATURE_LENGTH],
-) -> bool {
-    let sign = signature[63] & 0x80;
-    let mut sig = [0u8; SIGNATURE_LENGTH];
-    sig.copy_from_slice(signature);
-    sig[63] &= 0x7f;
-
-    let mut ed_pubkey = MontgomeryPoint(*public_key)
-        .to_edwards(sign)
-        .unwrap()
-        .compress()
-        .to_bytes();
-    ed_pubkey[31] &= 0x7F; // should be zero already, but just in case
-    ed_pubkey[31] |= sign;
-
-    PublicKey::from_bytes(&ed_pubkey)
-        .unwrap()
-        .verify(message, &Signature::from_bytes(&sig).unwrap())
-        .is_ok()
-}
-
 pub(crate) fn blake_hash(message: &[u8]) -> Vec<u8> {
     ////mv where?
     let mut blake = <Blake2b as VariableOutput>::new(32).unwrap();
@@ -187,45 +164,6 @@ pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_sig_verify() {
-        let msg = "bagira".as_bytes();
-        let mut pk = [0u8; PUBLIC_KEY_LENGTH];
-        pk.copy_from_slice(
-            "GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX"
-                .from_base58()
-                .unwrap()
-                .as_slice(),
-        );
-        let mut sig = [0u8; SIGNATURE_LENGTH];
-        sig.copy_from_slice(
-            "62Nc9BbpuJziRuuXvnYttT8hfWXsUPH1kAUfc2fBhLeuCV5szWW7GGFRtqRxbQd92p8cDaHKfUqXdkwcefXSHdp7"
-                .from_base58().unwrap().as_slice());
-        assert!(sig_verify(msg, &pk, &sig));
-    }
-
-    #[test]
-    fn test_sig_roundtrip() {
-        let msg = "bagira".as_bytes();
-        let mut sk = [0u8; SECRET_KEY_LENGTH];
-        sk.copy_from_slice(
-            &"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT"
-                .from_base58()
-                .unwrap()
-                .as_slice(),
-        );
-        let mut pk = [0u8; PUBLIC_KEY_LENGTH];
-        pk.copy_from_slice(
-            "GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX"
-                .from_base58()
-                .unwrap()
-                .as_slice(),
-        );
-        let sig = sign(msg, &sk);
-        println!("sig = {}", sig.to_base58());
-        assert!(sig_verify(msg, &pk, &sig));
-    }
 
     #[test]
     fn test_hashes() {
