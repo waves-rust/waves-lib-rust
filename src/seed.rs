@@ -1,5 +1,11 @@
 use bip39::{Language, Mnemonic, MnemonicType};
 
+/// Seed phrase generation function
+/// # Usage
+/// ```
+/// use acryl::seed::*;
+/// let phrase = generate_phrase();
+/// ```
 pub fn generate_phrase() -> String {
     let mnemonic = Mnemonic::new(MnemonicType::Words18, Language::English);
     let phrase: &str = mnemonic.phrase();
