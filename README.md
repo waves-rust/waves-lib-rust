@@ -1,4 +1,8 @@
 # Acryl
+
+![crates.io](https://img.shields.io/crates/v/acryl.svg)
+![docs.rs](https://docs.rs/acryl/badge.svg)
+
 A Rust interface to the [Acryl blockchain](https://acrylplatform.com)
 
 # Usage
