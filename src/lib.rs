@@ -1,3 +1,7 @@
+//! Acryl
+//!
+//! Library to work with Acryl blockchain (https://acrylplatform.com)
+//!
 mod bytebuffer;
 
 /// Address module
