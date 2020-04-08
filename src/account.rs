@@ -84,8 +84,15 @@ impl PrivateKeyAccount {
     }
 
     pub fn from_seed(seed: &str) -> PrivateKeyAccount {
+        let seed_bytes = seed.as_bytes().to_vec();
+        let nonce = [0, 0, 0, 0].to_vec();
+
         let mut sk = [0u8; SECRET_KEY_LENGTH];
-        sk.copy_from_slice(&Sha256::digest(seed.from_base58().unwrap().as_slice()));
+
+        let acc_seed = secure_hash([nonce, seed_bytes].concat().as_slice());
+        let hash_seed = &Sha256::digest(acc_seed.as_slice());
+
+        sk.copy_from_slice(hash_seed);
         sk[0] &= 248;
         sk[31] &= 127;
         sk[31] |= 64;
@@ -185,21 +192,21 @@ mod tests {
         let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("test");
         assert_eq!(
             sk,
-            "5sJHxDyR79erksKWynMWLjWzWwiTx48HFXyNravvb4iz"
+            "CuedBd7a6vBC6XXpatEj4S9ZoquLYPB7Ud17b69msZkt"
                 .from_base58()
                 .unwrap()
                 .as_slice()
         );
         assert_eq!(
             acc.to_bytes(),
-            "GoToDxRVGy2zvLQUFTW9bF1sgKUdCB4Go9xUjZpbNh3r"
+            "Cq5itmx4wbYuogySAoUp58MimLLkQrFFLr1tpJy2BYp1"
                 .from_base58()
                 .unwrap()
                 .as_slice()
         );
         assert_eq!(
             acc.to_address(TESTNET).0,
-            "3JRLk6mzxCdb6o1TXzr6tNrcmyLntG2C731"
+            "3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC"
                 .from_base58()
                 .unwrap()
                 .as_slice()
