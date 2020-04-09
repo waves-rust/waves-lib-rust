@@ -2,7 +2,8 @@ use crate::account::{blake_hash, Address, PublicKeyAccount};
 use crate::bytebuffer::Buffer;
 use base58::*;
 
-enum Type {
+/// Transaction type
+pub enum Type {
     Issue = 3,
     Transfer = 4,
     Reissue = 5,
@@ -17,7 +18,8 @@ enum Type {
     SetAssetScript = 15,
 }
 
-enum Version {
+/// Transaction version
+pub enum Version {
     V1 = 1,
     V2 = 2,
 }
@@ -49,6 +51,7 @@ impl Hash {
     }
 }
 
+/// Structure that sets key and value of account data storage entry.
 pub enum DataEntry<'a> {
     Integer(&'a str, u64),
     Boolean(&'a str, bool),
@@ -56,6 +59,7 @@ pub enum DataEntry<'a> {
     String(&'a str, &'a str),
 }
 
+/// Data specific to a particular transaction type
 pub enum TransactionData<'a> {
     Issue {
         name: &'a str,
@@ -120,7 +124,7 @@ pub enum TransactionData<'a> {
     },
 }
 
-/// A transaction. Data specific to a particular transaction type are stored in the `data` field.
+/// Transaction data. Data specific to a particular transaction type are stored in the `data` field.
 /// # Usage
 /// ```
 /// use acryl::account::{PrivateKeyAccount, TESTNET};
@@ -583,7 +587,7 @@ mod tests {
         let pk = PublicKeyAccount([1u8; 32]);
         let asset = Asset::new([2u8; 32]);
         let lease = TransactionId::new([3u8; 32]);
-        let recipient = Address::from_string("3JD4thvVVmzRRynaYHbdnUpv9QF7b1bFf4Y");
+        let recipient = Address::from_string("3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC");
         let fee = 100000;
         let ts: u64 = 1536000000000;
 
@@ -608,7 +612,7 @@ mod tests {
                 Some("atta ch me"),
                 ts,
             ),
-            "4xKPSytfy69czvTJdHH1tcduvkjNP6CY7Zcqpz3mgZPd",
+            "D65z1C3TPAu1Njq8mfJAt24zFLK6cwknajWsy9C5XfY3",
         );
         check_hash(
             &Transaction::new_reissue(&pk, &asset, 100000000, false, TESTNET, fee, ts),
@@ -620,7 +624,7 @@ mod tests {
         );
         check_hash(
             &Transaction::new_lease(&pk, &recipient, 10, TESTNET, fee, ts),
-            "GWz6Wyc7dMbLv6cAHrdMeMYUhq4iNAPiTCnJu9jz2cL8",
+            "5zY5UfRR63z3YdVDZKbDmMm25YE3jGZQsh1FQnhd8Lzd",
         );
         check_hash(
             &Transaction::new_lease_cancel(&pk, &lease, TESTNET, fee, ts),
@@ -639,7 +643,7 @@ mod tests {
                 fee,
                 ts,
             ),
-            "53mKjWQW8iHugRAvUfVpptj4czehfTRfEN1Uw2hxe3JN",
+            "8byL25bk3HBkDCWtgaMeoDaCjQQBVXG1eq4aVurYUY3U",
         );
 
         let arr = vec![4u8; 32];
@@ -676,8 +680,8 @@ mod tests {
 
     #[test]
     fn test_sign() {
-        let sender = PrivateKeyAccount::from_seed("seed");
-        let recipient = Address::from_string("3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K");
+        let sender = PrivateKeyAccount::from_seed("test");
+        let recipient = Address::from_string("3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC");
         let tx = Transaction::new_lease(&sender.1, &recipient, 100000, 84, 100000, 1500000000000);
 
         let ProvenTransaction { tx, proofs } = sender.sign_transaction(tx);
