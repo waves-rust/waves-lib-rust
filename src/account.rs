@@ -50,6 +50,10 @@ impl PublicKeyAccount {
         &self.0
     }
 
+    pub fn to_string(&self) -> String {
+        self.0.to_base58()
+    }
+
     pub fn to_address(&self, chain_id: u8) -> Address {
         let mut buf = [0u8; ADDRESS_LENGTH];
         buf[0] = ADDRESS_VERSION;
@@ -74,6 +78,10 @@ pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
 impl PrivateKeyAccount {
     pub fn public_key(&self) -> &PublicKeyAccount {
         &self.1
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.to_base58()
     }
 
     pub fn from_key_pair(
@@ -210,6 +218,26 @@ mod tests {
                 .from_base58()
                 .unwrap()
                 .as_slice()
+        );
+    }
+
+    #[test]
+    fn test_key_pair_to_string() {
+        let account = PrivateKeyAccount::from_seed("test");
+
+        assert_eq!(
+            account.to_string(),
+            "CuedBd7a6vBC6XXpatEj4S9ZoquLYPB7Ud17b69msZkt"
+        );
+
+        assert_eq!(
+            account.public_key().to_string(),
+            "Cq5itmx4wbYuogySAoUp58MimLLkQrFFLr1tpJy2BYp1"
+        );
+
+        assert_eq!(
+            account.public_key().to_address(TESTNET).to_string(),
+            "3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC"
         );
     }
 }

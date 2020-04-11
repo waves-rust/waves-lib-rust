@@ -1,6 +1,6 @@
 [package]
 name = "acryl"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
 description = "Library to work with Acryl blockchain (https://acrylplatform.com)"
 edition = "2018"
