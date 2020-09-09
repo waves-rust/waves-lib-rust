@@ -1,24 +1,27 @@
-use account::{blake_hash, Address, PublicKeyAccount, TESTNET};
+use crate::account::{blake_hash, Address, PublicKeyAccount};
+use crate::bytebuffer::Buffer;
 use base58::*;
-use bytebuffer::Buffer;
 
-enum Type {
+/// Transaction type
+pub enum Type {
     Issue = 3,
-    Transfer,
-    Reissue,
-    Burn,
+    Transfer = 4,
+    Reissue = 5,
+    Burn = 6,
     Lease = 8,
-    LeaseCancel,
-    Alias,
-    MassTransfer,
-    Data,
-    SetScript,
-    Sponsor,
+    LeaseCancel = 9,
+    Alias = 10,
+    MassTransfer = 11,
+    Data = 12,
+    SetScript = 13,
+    Sponsor = 14,
+    SetAssetScript = 15,
 }
 
-enum Version {
+/// Transaction version
+pub enum Version {
     V1 = 1,
-    V2,
+    V2 = 2,
 }
 
 const HASH_LENGTH: usize = 32;
@@ -48,6 +51,7 @@ impl Hash {
     }
 }
 
+/// Structure that sets key and value of account data storage entry.
 pub enum DataEntry<'a> {
     Integer(&'a str, u64),
     Boolean(&'a str, bool),
@@ -55,6 +59,7 @@ pub enum DataEntry<'a> {
     String(&'a str, &'a str),
 }
 
+/// Data specific to a particular transaction type
 pub enum TransactionData<'a> {
     Issue {
         name: &'a str,
@@ -63,6 +68,14 @@ pub enum TransactionData<'a> {
         decimals: u8,
         reissuable: bool,
         chain_id: u8,
+        script: Option<&'a [u8]>,
+    },
+    Transfer {
+        recipient: &'a Address,
+        asset: Option<&'a Asset>,
+        amount: u64,
+        fee_asset: Option<&'a Asset>,
+        attachment: Option<&'a str>,
     },
     Reissue {
         asset: &'a Asset,
@@ -74,13 +87,6 @@ pub enum TransactionData<'a> {
         asset: &'a Asset,
         quantity: u64,
         chain_id: u8,
-    },
-    Transfer {
-        recipient: &'a Address,
-        asset: Option<&'a Asset>,
-        amount: u64,
-        fee_asset: Option<&'a Asset>,
-        attachment: Option<&'a str>,
     },
     Lease {
         recipient: &'a Address,
@@ -111,13 +117,18 @@ pub enum TransactionData<'a> {
         asset: &'a Asset,
         rate: Option<u64>,
     },
+    SetAssetScript {
+        asset: &'a Asset,
+        script: Option<&'a [u8]>,
+        chain_id: u8,
+    },
 }
 
-/// A transaction. Data specific to a particular transaction type are stored in the `data` field.
+/// Transaction data. Data specific to a particular transaction type are stored in the `data` field.
 /// # Usage
 /// ```
-/// use waves::account::{PrivateKeyAccount, TESTNET};
-/// use waves::transaction::*;
+/// use wavesplatform::account::{PrivateKeyAccount, TESTNET};
+/// use wavesplatform::transaction::*;
 /// let account = PrivateKeyAccount::from_seed("seed");
 /// let tx = Transaction::new_alias(&account.public_key(), "rhino", TESTNET, 100000, 1536000000000);
 /// let signed_tx = account.sign_transaction(tx);
@@ -144,6 +155,7 @@ impl<'a> Transaction<'a> {
         chain_id: u8,
         fee: u64,
         timestamp: u64,
+        script: Option<&'a [u8]>,
     ) -> Transaction<'a> {
         Transaction {
             data: Issue {
@@ -153,11 +165,38 @@ impl<'a> Transaction<'a> {
                 decimals,
                 reissuable,
                 chain_id,
+                script,
             },
             fee,
             timestamp,
             sender_public_key,
             type_id: Type::Issue as u8,
+            version: Version::V2 as u8,
+        }
+    }
+
+    pub fn new_transfer(
+        sender_public_key: &'a PublicKeyAccount,
+        recipient: &'a Address,
+        asset: Option<&'a Asset>,
+        amount: u64,
+        fee_asset: Option<&'a Asset>,
+        fee: u64,
+        attachment: Option<&'a str>,
+        timestamp: u64,
+    ) -> Transaction<'a> {
+        Transaction {
+            data: Transfer {
+                recipient,
+                asset,
+                amount,
+                fee_asset,
+                attachment,
+            },
+            fee,
+            timestamp,
+            sender_public_key,
+            type_id: Type::Transfer as u8,
             version: Version::V2 as u8,
         }
     }
@@ -204,32 +243,6 @@ impl<'a> Transaction<'a> {
             timestamp,
             sender_public_key,
             type_id: Type::Burn as u8,
-            version: Version::V2 as u8,
-        }
-    }
-
-    pub fn new_transfer(
-        sender_public_key: &'a PublicKeyAccount,
-        recipient: &'a Address,
-        asset: Option<&'a Asset>,
-        amount: u64,
-        fee_asset: Option<&'a Asset>,
-        fee: u64,
-        attachment: Option<&'a str>,
-        timestamp: u64,
-    ) -> Transaction<'a> {
-        Transaction {
-            data: Transfer {
-                recipient,
-                asset,
-                amount,
-                fee_asset,
-                attachment,
-            },
-            fee,
-            timestamp,
-            sender_public_key,
-            type_id: Type::Transfer as u8,
             version: Version::V2 as u8,
         }
     }
@@ -362,6 +375,28 @@ impl<'a> Transaction<'a> {
         }
     }
 
+    pub fn new_set_asset_script(
+        sender_public_key: &'a PublicKeyAccount,
+        asset: &'a Asset,
+        script: Option<&'a [u8]>,
+        chain_id: u8,
+        fee: u64,
+        timestamp: u64,
+    ) -> Transaction<'a> {
+        Transaction {
+            data: SetAssetScript {
+                asset,
+                script,
+                chain_id,
+            },
+            fee,
+            timestamp,
+            sender_public_key,
+            type_id: Type::SetAssetScript as u8,
+            version: Version::V1 as u8,
+        }
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = Buffer::new();
         buf.byte(self.type_id).byte(self.version);
@@ -373,17 +408,37 @@ impl<'a> Transaction<'a> {
                 decimals,
                 reissuable,
                 chain_id,
+                script,
+            } => {
+                buf.byte(chain_id)
+                    .bytes(self.sender_public_key.to_bytes())
+                    .array(name.as_bytes())
+                    .array(description.as_bytes())
+                    .long(quantity)
+                    .byte(decimals)
+                    .boolean(reissuable)
+                    .long(self.fee)
+                    .long(self.timestamp);
+                match script {
+                    Some(bytes) => buf.byte(1).array(bytes),
+                    None => buf.byte(0),
+                }
+            }
+            Transfer {
+                recipient,
+                ref asset,
+                amount,
+                ref fee_asset,
+                attachment,
             } => buf
-                .byte(chain_id)
                 .bytes(self.sender_public_key.to_bytes())
-                .array(name.as_bytes())
-                .array(description.as_bytes())
-                .long(quantity)
-                .byte(decimals)
-                .boolean(reissuable)
-                .long(self.fee)
+                .asset_opt(&asset)
+                .asset_opt(&fee_asset)
                 .long(self.timestamp)
-                .byte(0),
+                .long(amount)
+                .long(self.fee)
+                .recipient(recipient.chain_id(), &recipient.to_string())
+                .array_opt(attachment.map(|s| s.as_bytes())),
             Reissue {
                 asset,
                 quantity,
@@ -408,21 +463,6 @@ impl<'a> Transaction<'a> {
                 .long(quantity)
                 .long(self.fee)
                 .long(self.timestamp),
-            Transfer {
-                recipient,
-                ref asset,
-                amount,
-                ref fee_asset,
-                attachment,
-            } => buf
-                .bytes(self.sender_public_key.to_bytes())
-                .asset_opt(&asset)
-                .asset_opt(&fee_asset)
-                .long(self.timestamp)
-                .long(amount)
-                .long(self.fee)
-                .recipient(recipient.chain_id(), &recipient.to_string())
-                .array_opt(attachment.map(|s| s.as_bytes())),
             Lease {
                 recipient,
                 amount,
@@ -485,6 +525,20 @@ impl<'a> Transaction<'a> {
                 .long(rate.unwrap_or(0))
                 .long(self.fee)
                 .long(self.timestamp),
+            SetAssetScript {
+                asset,
+                script,
+                chain_id,
+            } => {
+                buf.byte(chain_id)
+                    .bytes(self.sender_public_key.to_bytes())
+                    .asset(asset);
+                match script {
+                    Some(bytes) => buf.byte(1).array(bytes),
+                    None => buf.byte(0),
+                };
+                buf.long(self.fee).long(self.timestamp)
+            }
         };
         Vec::from(buf.as_slice())
     }
@@ -525,8 +579,7 @@ pub struct ProvenTransaction<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use account::{Address, PrivateKeyAccount};
-    use base58::*;
+    use crate::account::{Address, PrivateKeyAccount, TESTNET};
     use ed25519_dalek::*;
 
     #[test]
@@ -534,7 +587,7 @@ mod tests {
         let pk = PublicKeyAccount([1u8; 32]);
         let asset = Asset::new([2u8; 32]);
         let lease = TransactionId::new([3u8; 32]);
-        let recipient = Address::from_string("3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K");
+        let recipient = Address::from_string("3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC");
         let fee = 100000;
         let ts: u64 = 1536000000000;
 
@@ -544,17 +597,9 @@ mod tests {
 
         check_hash(
             &Transaction::new_issue(
-                &pk, "coin", "coin", 100000000, 8, false, TESTNET, 100000, ts,
+                &pk, "coin", "coin", 100000000, 8, false, TESTNET, 100000, ts, None,
             ),
-            "GHqHz8xot1Yo7fivjPBYiqgtJNW3jR6bvpNh2WH66tEM",
-        );
-        check_hash(
-            &Transaction::new_reissue(&pk, &asset, 100000000, false, TESTNET, fee, ts),
-            "83WaG6AAzxF3NFormpqrJr9Bi8eSdwyp3DEB67N7avvM",
-        );
-        check_hash(
-            &Transaction::new_burn(&pk, &asset, 100000000, TESTNET, fee, ts),
-            "CfsAEtEAwe4NFKjezeCssaUPevTX56rBsuMeMKRERd6Y",
+            "AkgNv2ULydQSFSaxrDj2ufsZmMfd8qD6VGNKsSiPZwxC",
         );
         check_hash(
             &Transaction::new_transfer(
@@ -567,18 +612,26 @@ mod tests {
                 Some("atta ch me"),
                 ts,
             ),
-            "8cJiFqBMXMsp5sPMyoN3vbeGPovfYCe4FFdrsvmCfgp6",
+            "D65z1C3TPAu1Njq8mfJAt24zFLK6cwknajWsy9C5XfY3",
+        );
+        check_hash(
+            &Transaction::new_reissue(&pk, &asset, 100000000, false, TESTNET, fee, ts),
+            "8KC9vS4WswhfccZygjZVHVzsgo8HtuuxmFCAa6BQvmQK",
+        );
+        check_hash(
+            &Transaction::new_burn(&pk, &asset, 100000000, TESTNET, fee, ts),
+            "8kwwFWMKuPbR5bi8sf27dQegifxRNXjVx89URgMjYAjJ",
         );
         check_hash(
             &Transaction::new_lease(&pk, &recipient, 10, TESTNET, fee, ts),
-            "4hb6dvZ1CvNBc3zLKoHMLG98rsM4VhF2qqkFMwnjxGkW",
+            "5zY5UfRR63z3YdVDZKbDmMm25YE3jGZQsh1FQnhd8Lzd",
         );
         check_hash(
             &Transaction::new_lease_cancel(&pk, &lease, TESTNET, fee, ts),
-            "9BQLzTCHi9H9jqKeC5rvN7x9m8xfHQh1iApqmAPFTFEU",
+            "7KjBpRnNWEWW4gVcQWrMa9k9qydvYCohHR8ZFMJBfkaq",
         );
         let alias = Transaction::new_alias(&pk, "lilias", TESTNET, fee, ts);
-        check_hash(&alias, "GPyHWQSCT6znfZmjfZfsS6TXPV3zueVZKFUWG7duku1Z");
+        check_hash(&alias, "FRTvY7Amme8czANsqa7Gj3CM1bM4MtDeFuoLx8JL8bwu");
 
         let transfers = vec![(&recipient, 10), (&recipient, 10)];
         check_hash(
@@ -590,7 +643,7 @@ mod tests {
                 fee,
                 ts,
             ),
-            "C8yeQ2eNT6FuRkUZVEAxYo1F4qc5bGqjihkJnpDZLZsj",
+            "8byL25bk3HBkDCWtgaMeoDaCjQQBVXG1eq4aVurYUY3U",
         );
 
         let arr = vec![4u8; 32];
@@ -609,22 +662,26 @@ mod tests {
         let script = vec![1, 6, 183, 111, 203, 71];
         check_hash(
             &Transaction::new_script(&pk, Some(script.as_slice()), TESTNET, fee, ts),
-            "HASXvcgoikizpWnCLd2cXNeCN5DxdKojCfcn8f7T3KjK",
+            "9hAcaE3yDMMbwXMcZpdANC9YNXPgqK6Exyqd5U9jXhUq",
         );
         check_hash(
             &Transaction::new_script(&pk, None, TESTNET, fee, ts),
-            "1gwS1qkKKShwk5scB7M7N9t6L3eX2Hpkp9hF5RG8HJD",
+            "AphhKVVhyBH2SFYTaSzWbGL7NPHZ1F9RUkFN4uhMZ9QE",
         );
         check_hash(
             &Transaction::new_sponsor(&pk, &asset, Some(100), fee, ts),
             "9zmHx3fyXz7pW6bRazPP28PGjnM8XjoHuyjzXCMHE2PY",
         );
+        check_hash(
+            &Transaction::new_set_asset_script(&pk, &asset, None, TESTNET, fee, ts),
+            "8MGgNDBgvEAW5ZQAG4p1bMK2zsnxUX6T5DwmcSM3F7Bh",
+        );
     }
 
     #[test]
     fn test_sign() {
-        let sender = PrivateKeyAccount::from_seed("seed");
-        let recipient = Address::from_string("3MzZCGFyuxgC4ZmtKRS7vpJTs75ZXdkbp1K");
+        let sender = PrivateKeyAccount::from_seed("test");
+        let recipient = Address::from_string("3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC");
         let tx = Transaction::new_lease(&sender.1, &recipient, 100000, 84, 100000, 1500000000000);
 
         let ProvenTransaction { tx, proofs } = sender.sign_transaction(tx);
@@ -632,7 +689,7 @@ mod tests {
         let sig = proofs.get(0).unwrap();
         assert_eq!(sig.len(), SIGNATURE_LENGTH);
 
-        let ProvenTransaction { tx, proofs } = tx.with_proofs(vec![vec![1, 2, 3]]);
+        let ProvenTransaction { tx: _, proofs } = tx.with_proofs(vec![vec![1, 2, 3]]);
         assert_eq!(proofs.len(), 1);
         let sig = proofs.get(0).unwrap();
         assert_eq!(*sig, vec![1, 2, 3]);

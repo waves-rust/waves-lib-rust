@@ -3,7 +3,7 @@ use bip39::{Language, Mnemonic, MnemonicType};
 /// Seed phrase generation function
 /// # Usage
 /// ```
-/// use waves::seed::*;
+/// use wavesplatform::seed::*;
 /// let phrase = generate_phrase();
 /// ```
 pub fn generate_phrase() -> String {

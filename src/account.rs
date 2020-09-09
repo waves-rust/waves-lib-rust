@@ -1,11 +1,9 @@
-use bytebuffer::Buffer;
-use transaction::{ProvenTransaction, Transaction};
+use crate::transaction::{ProvenTransaction, Transaction};
 
 use base58::*;
 use blake2::digest::{Input, VariableOutput};
 use blake2::Blake2b;
 use curve25519_dalek::constants;
-use curve25519_dalek::montgomery::MontgomeryPoint;
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::*;
 use rand;
@@ -15,11 +13,13 @@ use sha3::Keccak256;
 
 const ADDRESS_VERSION: u8 = 1;
 const ADDRESS_LENGTH: usize = 26;
-const HASH_LENGTH: usize = 32;
 
+/// MAINNET chainID
 pub const MAINNET: u8 = 'W' as u8;
+/// TESTNET chainID
 pub const TESTNET: u8 = 'T' as u8;
 
+/// An account possessing a address.
 pub struct Address([u8; ADDRESS_LENGTH]);
 
 impl Address {
@@ -42,11 +42,16 @@ impl Address {
     }
 }
 
+/// An account possessing a public key. Using `PublicKeyAccount` you can get the address.
 pub struct PublicKeyAccount(pub [u8; PUBLIC_KEY_LENGTH]);
 
 impl PublicKeyAccount {
     pub fn to_bytes(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
         &self.0
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.to_base58()
     }
 
     pub fn to_address(&self, chain_id: u8) -> Address {
@@ -64,7 +69,7 @@ impl PublicKeyAccount {
 /// transactions.
 /// # Usage
 /// ```
-/// use waves::account::{PrivateKeyAccount, TESTNET};
+/// use wavesplatform::account::{PrivateKeyAccount, TESTNET};
 /// let account = PrivateKeyAccount::from_seed("seed");
 /// println!("my address: {}", account.public_key().to_address(TESTNET).to_string());
 /// ```
@@ -75,6 +80,10 @@ impl PrivateKeyAccount {
         &self.1
     }
 
+    pub fn to_string(&self) -> String {
+        self.0.to_base58()
+    }
+
     pub fn from_key_pair(
         sk: [u8; SECRET_KEY_LENGTH],
         pk: [u8; PUBLIC_KEY_LENGTH],
@@ -83,8 +92,15 @@ impl PrivateKeyAccount {
     }
 
     pub fn from_seed(seed: &str) -> PrivateKeyAccount {
+        let seed_bytes = seed.as_bytes().to_vec();
+        let nonce = [0, 0, 0, 0].to_vec();
+
         let mut sk = [0u8; SECRET_KEY_LENGTH];
-        sk.copy_from_slice(&Sha256::digest(seed.from_base58().unwrap().as_slice()));
+
+        let acc_seed = secure_hash([nonce, seed_bytes].concat().as_slice());
+        let hash_seed = &Sha256::digest(acc_seed.as_slice());
+
+        sk.copy_from_slice(hash_seed);
         sk[0] &= 248;
         sk[31] &= 127;
         sk[31] |= 64;
@@ -112,7 +128,7 @@ static INITBUF: [u8; 32] = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 ];
 
-fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
+pub(crate) fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
     let mut hash = Sha512::default();
     hash.input(&INITBUF);
 
@@ -147,30 +163,6 @@ fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_
     result
 }
 
-fn sig_verify(
-    message: &[u8],
-    public_key: &[u8; PUBLIC_KEY_LENGTH],
-    signature: &[u8; SIGNATURE_LENGTH],
-) -> bool {
-    let sign = signature[63] & 0x80;
-    let mut sig = [0u8; SIGNATURE_LENGTH];
-    sig.copy_from_slice(signature);
-    sig[63] &= 0x7f;
-
-    let mut ed_pubkey = MontgomeryPoint(*public_key)
-        .to_edwards(sign)
-        .unwrap()
-        .compress()
-        .to_bytes();
-    ed_pubkey[31] &= 0x7F; // should be zero already, but just in case
-    ed_pubkey[31] |= sign;
-
-    PublicKey::from_bytes(&ed_pubkey)
-        .unwrap()
-        .verify::<Sha512>(message, &Signature::from_bytes(&sig).unwrap())
-        .is_ok()
-}
-
 pub(crate) fn blake_hash(message: &[u8]) -> Vec<u8> {
     ////mv where?
     let mut blake = <Blake2b as VariableOutput>::new(32).unwrap();
@@ -189,45 +181,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sig_verify() {
-        let msg = "bagira".as_bytes();
-        let mut pk = [0u8; PUBLIC_KEY_LENGTH];
-        pk.copy_from_slice(
-            "GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX"
-                .from_base58()
-                .unwrap()
-                .as_slice(),
-        );
-        let mut sig = [0u8; SIGNATURE_LENGTH];
-        sig.copy_from_slice(
-            "62Nc9BbpuJziRuuXvnYttT8hfWXsUPH1kAUfc2fBhLeuCV5szWW7GGFRtqRxbQd92p8cDaHKfUqXdkwcefXSHdp7"
-                .from_base58().unwrap().as_slice());
-        assert!(sig_verify(msg, &pk, &sig));
-    }
-
-    #[test]
-    fn test_sig_roundtrip() {
-        let msg = "bagira".as_bytes();
-        let mut sk = [0u8; SECRET_KEY_LENGTH];
-        sk.copy_from_slice(
-            &"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT"
-                .from_base58()
-                .unwrap()
-                .as_slice(),
-        );
-        let mut pk = [0u8; PUBLIC_KEY_LENGTH];
-        pk.copy_from_slice(
-            "GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX"
-                .from_base58()
-                .unwrap()
-                .as_slice(),
-        );
-        let sig = sign(msg, &sk);
-        println!("sig = {}", sig.to_base58());
-        assert!(sig_verify(msg, &pk, &sig));
-    }
-
-    #[test]
     fn test_hashes() {
         let blake_in = "blake".as_bytes();
         let blake_out = "HRFQW3JNhUYcYXyKZJ1ZefKDhZkLKJk1dzzy3PzYPr3y"
@@ -244,27 +197,47 @@ mod tests {
 
     #[test]
     fn test_private_key_from_seed() {
-        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("waves");
+        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("test");
         assert_eq!(
             sk,
-            "4oaS7VtASCY9KrVAabrcgKWDWcZ7dKb13UKE9zFcpWWS"
+            "CuedBd7a6vBC6XXpatEj4S9ZoquLYPB7Ud17b69msZkt"
                 .from_base58()
                 .unwrap()
                 .as_slice()
         );
         assert_eq!(
             acc.to_bytes(),
-            "2GRyKXShb8aJLAm9qUBzeesfXvvVcEbnmeiioD8fh2UL"
+            "Cq5itmx4wbYuogySAoUp58MimLLkQrFFLr1tpJy2BYp1"
                 .from_base58()
                 .unwrap()
                 .as_slice()
         );
         assert_eq!(
             acc.to_address(TESTNET).0,
-            "3N9QEKMtfcYDPHgn53TCF9tGkmTwDdq6qxT"
+            "3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC"
                 .from_base58()
                 .unwrap()
                 .as_slice()
+        );
+    }
+
+    #[test]
+    fn test_key_pair_to_string() {
+        let account = PrivateKeyAccount::from_seed("test");
+
+        assert_eq!(
+            account.to_string(),
+            "CuedBd7a6vBC6XXpatEj4S9ZoquLYPB7Ud17b69msZkt"
+        );
+
+        assert_eq!(
+            account.public_key().to_string(),
+            "Cq5itmx4wbYuogySAoUp58MimLLkQrFFLr1tpJy2BYp1"
+        );
+
+        assert_eq!(
+            account.public_key().to_address(TESTNET).to_string(),
+            "3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC"
         );
     }
 }
