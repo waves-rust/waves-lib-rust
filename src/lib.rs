@@ -1,12 +1,14 @@
-extern crate base58;
-extern crate rand;
-extern crate curve25519_dalek;
-extern crate ed25519_dalek;
-extern crate blake2;
-extern crate sha2;
-extern crate sha3;
-
+//! Waves
+//!
+//! Library to work with Waves blockchain (https://wavesplatform.com)
+//!
 mod bytebuffer;
 
+/// Address module
 pub mod account;
+/// Seed phrase module
+pub mod seed;
+/// Transaction module
 pub mod transaction;
+/// Util module
+pub mod util;

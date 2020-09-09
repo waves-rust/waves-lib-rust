@@ -1,8 +1,8 @@
+use crate::transaction::{Asset, DataEntry};
 use base58::*;
-use transaction::{Asset, DataEntry};
 
 pub(crate) struct Buffer {
-    buf: Vec<u8>
+    buf: Vec<u8>,
 }
 
 impl Buffer {
@@ -31,15 +31,20 @@ impl Buffer {
 
     pub fn long(&mut self, n: u64) -> &mut Buffer {
         let bytes = [
-            ((n >> 56) & 0xff) as u8, ((n >> 48) & 0xff) as u8,
-            ((n >> 40) & 0xff) as u8, ((n >> 32) & 0xff) as u8,
-            ((n >> 24) & 0xff) as u8, ((n >> 16) & 0xff) as u8,
-            ((n >> 8) & 0xff) as u8, (n & 0xff) as u8];
+            ((n >> 56) & 0xff) as u8,
+            ((n >> 48) & 0xff) as u8,
+            ((n >> 40) & 0xff) as u8,
+            ((n >> 32) & 0xff) as u8,
+            ((n >> 24) & 0xff) as u8,
+            ((n >> 16) & 0xff) as u8,
+            ((n >> 8) & 0xff) as u8,
+            (n & 0xff) as u8,
+        ];
         self.bytes(&bytes)
     }
 
     pub fn boolean(&mut self, b: bool) -> &mut Buffer {
-        let val = if b {1} else {0};
+        let val = if b { 1 } else { 0 };
         self.buf.push(val);
         self
     }
@@ -47,7 +52,10 @@ impl Buffer {
     pub fn recipient(&mut self, chain_id: u8, recipient: &str) -> &mut Buffer {
         if recipient.len() <= 30 {
             // assume an alias
-            self.byte(0x02).byte(chain_id).size(recipient.len()).bytes(&recipient.as_bytes())
+            self.byte(0x02)
+                .byte(chain_id)
+                .size(recipient.len())
+                .bytes(&recipient.as_bytes())
         } else {
             self.bytes(&recipient.from_base58().unwrap().as_slice())
         }
@@ -68,7 +76,7 @@ impl Buffer {
     pub fn asset_opt(&mut self, asset: &Option<&Asset>) -> &mut Buffer {
         match asset {
             Some(aid) => self.byte(1).asset(aid),
-            None => self.byte(0)
+            None => self.byte(0),
         }
     }
 
