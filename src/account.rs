@@ -1,15 +1,15 @@
 use bytebuffer::Buffer;
-use transaction::{Transaction, ProvenTransaction};
+use transaction::{ProvenTransaction, Transaction};
 
 use base58::*;
+use blake2::digest::{Input, VariableOutput};
+use blake2::Blake2b;
 use curve25519_dalek::constants;
 use curve25519_dalek::montgomery::MontgomeryPoint;
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::*;
 use rand;
 use rand::Rng;
-use blake2::Blake2b;
-use blake2::digest::{Input, VariableOutput};
 use sha2::{Digest, Sha256, Sha512};
 use sha3::Keccak256;
 
@@ -37,7 +37,7 @@ impl Address {
 
     pub fn from_string(base58: &str) -> Address {
         let mut bytes = [0u8; ADDRESS_LENGTH];
-        bytes.copy_from_slice(base58.from_base58().unwrap().as_slice());////map unwrap, handle bad length
+        bytes.copy_from_slice(base58.from_base58().unwrap().as_slice()); ////map unwrap, handle bad length
         Address(bytes)
     }
 }
@@ -50,7 +50,7 @@ impl PublicKeyAccount {
     }
 
     pub fn to_address(&self, chain_id: u8) -> Address {
-        let mut buf= [0u8; ADDRESS_LENGTH];
+        let mut buf = [0u8; ADDRESS_LENGTH];
         buf[0] = ADDRESS_VERSION;
         buf[1] = chain_id;
         buf[2..22].copy_from_slice(&secure_hash(&self.0)[..20]);
@@ -75,14 +75,17 @@ impl PrivateKeyAccount {
         &self.1
     }
 
-    pub fn from_key_pair(sk: [u8; SECRET_KEY_LENGTH], pk: [u8; PUBLIC_KEY_LENGTH]) -> PrivateKeyAccount {
+    pub fn from_key_pair(
+        sk: [u8; SECRET_KEY_LENGTH],
+        pk: [u8; PUBLIC_KEY_LENGTH],
+    ) -> PrivateKeyAccount {
         PrivateKeyAccount(sk, PublicKeyAccount(pk))
     }
 
     pub fn from_seed(seed: &str) -> PrivateKeyAccount {
         let mut sk = [0u8; SECRET_KEY_LENGTH];
         sk.copy_from_slice(&Sha256::digest(seed.from_base58().unwrap().as_slice()));
-        sk[0]  &= 248;
+        sk[0] &= 248;
         sk[31] &= 127;
         sk[31] |= 64;
 
@@ -97,13 +100,17 @@ impl PrivateKeyAccount {
 
     pub fn sign_transaction<'a>(&self, tx: Transaction<'a>) -> ProvenTransaction<'a> {
         let signature = self.sign_bytes(&tx.to_bytes());
-        ProvenTransaction { tx, proofs: vec![signature.to_vec()] }
+        ProvenTransaction {
+            tx,
+            proofs: vec![signature.to_vec()],
+        }
     }
 }
 
 static INITBUF: [u8; 32] = [
     0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+];
 
 fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_LENGTH] {
     let mut hash = Sha512::default();
@@ -118,7 +125,9 @@ fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_
     hash.input(&rndbuf);
 
     let rsc = Scalar::from_hash(hash);
-    let r = (&rsc * &constants::ED25519_BASEPOINT_TABLE).compress().to_bytes();
+    let r = (&rsc * &constants::ED25519_BASEPOINT_TABLE)
+        .compress()
+        .to_bytes();
 
     let ed_pubkey = &constants::ED25519_BASEPOINT_POINT * &Scalar::from_bits(*secret_key);
     let pubkey = ed_pubkey.compress().to_bytes();
@@ -138,29 +147,40 @@ fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8; SIGNATURE_
     result
 }
 
-fn sig_verify(message: &[u8], public_key: &[u8; PUBLIC_KEY_LENGTH], signature: &[u8; SIGNATURE_LENGTH]) -> bool {
+fn sig_verify(
+    message: &[u8],
+    public_key: &[u8; PUBLIC_KEY_LENGTH],
+    signature: &[u8; SIGNATURE_LENGTH],
+) -> bool {
     let sign = signature[63] & 0x80;
     let mut sig = [0u8; SIGNATURE_LENGTH];
     sig.copy_from_slice(signature);
     sig[63] &= 0x7f;
 
-    let mut ed_pubkey = MontgomeryPoint(*public_key).to_edwards(sign).unwrap().compress().to_bytes();
-    ed_pubkey[31] &= 0x7F;  // should be zero already, but just in case
+    let mut ed_pubkey = MontgomeryPoint(*public_key)
+        .to_edwards(sign)
+        .unwrap()
+        .compress()
+        .to_bytes();
+    ed_pubkey[31] &= 0x7F; // should be zero already, but just in case
     ed_pubkey[31] |= sign;
 
-    PublicKey::from_bytes(&ed_pubkey).unwrap()
-        .verify::<Sha512>(message,&Signature::from_bytes(&sig).unwrap())
+    PublicKey::from_bytes(&ed_pubkey)
+        .unwrap()
+        .verify::<Sha512>(message, &Signature::from_bytes(&sig).unwrap())
         .is_ok()
 }
 
-pub(crate) fn blake_hash(message: &[u8]) -> Vec<u8> {////mv where?
+pub(crate) fn blake_hash(message: &[u8]) -> Vec<u8> {
+    ////mv where?
     let mut blake = <Blake2b as VariableOutput>::new(32).unwrap();
     blake.process(message);
     let mut buf = [0u8; 32];
     blake.variable_result(&mut buf).unwrap().to_vec()
 }
 
-pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {////mv where? return [u8]?
+pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {
+    ////mv where? return [u8]?
     Keccak256::digest(&blake_hash(message)).to_vec()
 }
 
@@ -173,7 +193,11 @@ mod tests {
         let msg = "bagira".as_bytes();
         let mut pk = [0u8; PUBLIC_KEY_LENGTH];
         pk.copy_from_slice(
-            "GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
+            "GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX"
+                .from_base58()
+                .unwrap()
+                .as_slice(),
+        );
         let mut sig = [0u8; SIGNATURE_LENGTH];
         sig.copy_from_slice(
             "62Nc9BbpuJziRuuXvnYttT8hfWXsUPH1kAUfc2fBhLeuCV5szWW7GGFRtqRxbQd92p8cDaHKfUqXdkwcefXSHdp7"
@@ -185,9 +209,19 @@ mod tests {
     fn test_sig_roundtrip() {
         let msg = "bagira".as_bytes();
         let mut sk = [0u8; SECRET_KEY_LENGTH];
-        sk.copy_from_slice(&"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT".from_base58().unwrap().as_slice());
+        sk.copy_from_slice(
+            &"25Um7fKYkySZnweUEVAn9RLtxN5xHRd7iqpqYSMNQEeT"
+                .from_base58()
+                .unwrap()
+                .as_slice(),
+        );
         let mut pk = [0u8; PUBLIC_KEY_LENGTH];
-        pk.copy_from_slice("GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX".from_base58().unwrap().as_slice());
+        pk.copy_from_slice(
+            "GqpLEy65XtMzGNrsfj6wXXeffLduEt1HKhBfgJGSFajX"
+                .from_base58()
+                .unwrap()
+                .as_slice(),
+        );
         let sig = sign(msg, &sk);
         println!("sig = {}", sig.to_base58());
         assert!(sig_verify(msg, &pk, &sig));
@@ -196,19 +230,41 @@ mod tests {
     #[test]
     fn test_hashes() {
         let blake_in = "blake".as_bytes();
-        let blake_out = "HRFQW3JNhUYcYXyKZJ1ZefKDhZkLKJk1dzzy3PzYPr3y".from_base58().unwrap();
+        let blake_out = "HRFQW3JNhUYcYXyKZJ1ZefKDhZkLKJk1dzzy3PzYPr3y"
+            .from_base58()
+            .unwrap();
         assert_eq!(blake_hash(blake_in), blake_out.as_slice());
 
         let secure_in = "baffled bobcat's been beaten by black bears".as_bytes();
-        let secure_out = "4FSFJanCrKoB15fYmjs3FzhPLNyMj3i7xJjtynbyZtm8".from_base58().unwrap();
+        let secure_out = "4FSFJanCrKoB15fYmjs3FzhPLNyMj3i7xJjtynbyZtm8"
+            .from_base58()
+            .unwrap();
         assert_eq!(secure_hash(secure_in), secure_out.as_slice());
     }
 
     #[test]
     fn test_private_key_from_seed() {
         let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("waves");
-        assert_eq!(sk, "4oaS7VtASCY9KrVAabrcgKWDWcZ7dKb13UKE9zFcpWWS".from_base58().unwrap().as_slice());
-        assert_eq!(acc.to_bytes(), "2GRyKXShb8aJLAm9qUBzeesfXvvVcEbnmeiioD8fh2UL".from_base58().unwrap().as_slice());
-        assert_eq!(acc.to_address(TESTNET).0, "3N9QEKMtfcYDPHgn53TCF9tGkmTwDdq6qxT".from_base58().unwrap().as_slice());
+        assert_eq!(
+            sk,
+            "4oaS7VtASCY9KrVAabrcgKWDWcZ7dKb13UKE9zFcpWWS"
+                .from_base58()
+                .unwrap()
+                .as_slice()
+        );
+        assert_eq!(
+            acc.to_bytes(),
+            "2GRyKXShb8aJLAm9qUBzeesfXvvVcEbnmeiioD8fh2UL"
+                .from_base58()
+                .unwrap()
+                .as_slice()
+        );
+        assert_eq!(
+            acc.to_address(TESTNET).0,
+            "3N9QEKMtfcYDPHgn53TCF9tGkmTwDdq6qxT"
+                .from_base58()
+                .unwrap()
+                .as_slice()
+        );
     }
 }
