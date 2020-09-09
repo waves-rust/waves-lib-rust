@@ -599,7 +599,7 @@ mod tests {
             &Transaction::new_issue(
                 &pk, "coin", "coin", 100000000, 8, false, TESTNET, 100000, ts, None,
             ),
-            "AkgNv2ULydQSFSaxrDj2ufsZmMfd8qD6VGNKsSiPZwxC",
+            "GHqHz8xot1Yo7fivjPBYiqgtJNW3jR6bvpNh2WH66tEM",
         );
         check_hash(
             &Transaction::new_transfer(
@@ -612,26 +612,26 @@ mod tests {
                 Some("atta ch me"),
                 ts,
             ),
-            "D65z1C3TPAu1Njq8mfJAt24zFLK6cwknajWsy9C5XfY3",
+            "E4Jc1vMh4TqryNzajU7onTHLLFkDmjNzo7aSedX4Rpad",
         );
         check_hash(
             &Transaction::new_reissue(&pk, &asset, 100000000, false, TESTNET, fee, ts),
-            "8KC9vS4WswhfccZygjZVHVzsgo8HtuuxmFCAa6BQvmQK",
+            "83WaG6AAzxF3NFormpqrJr9Bi8eSdwyp3DEB67N7avvM",
         );
         check_hash(
             &Transaction::new_burn(&pk, &asset, 100000000, TESTNET, fee, ts),
-            "8kwwFWMKuPbR5bi8sf27dQegifxRNXjVx89URgMjYAjJ",
+            "CfsAEtEAwe4NFKjezeCssaUPevTX56rBsuMeMKRERd6Y",
         );
         check_hash(
             &Transaction::new_lease(&pk, &recipient, 10, TESTNET, fee, ts),
-            "5zY5UfRR63z3YdVDZKbDmMm25YE3jGZQsh1FQnhd8Lzd",
+            "HHs5qfpDN88WTGszpfjVedhMPHeHynDtWPobm2rkpfH4",
         );
         check_hash(
             &Transaction::new_lease_cancel(&pk, &lease, TESTNET, fee, ts),
-            "7KjBpRnNWEWW4gVcQWrMa9k9qydvYCohHR8ZFMJBfkaq",
+            "9BQLzTCHi9H9jqKeC5rvN7x9m8xfHQh1iApqmAPFTFEU",
         );
         let alias = Transaction::new_alias(&pk, "lilias", TESTNET, fee, ts);
-        check_hash(&alias, "FRTvY7Amme8czANsqa7Gj3CM1bM4MtDeFuoLx8JL8bwu");
+        check_hash(&alias, "GPyHWQSCT6znfZmjfZfsS6TXPV3zueVZKFUWG7duku1Z");
 
         let transfers = vec![(&recipient, 10), (&recipient, 10)];
         check_hash(
@@ -643,7 +643,7 @@ mod tests {
                 fee,
                 ts,
             ),
-            "8byL25bk3HBkDCWtgaMeoDaCjQQBVXG1eq4aVurYUY3U",
+            "HwWmpBbbYPShKsFAgVA3eH86LkrZgX1xYSoH5YarnwPE",
         );
 
         let arr = vec![4u8; 32];
@@ -662,11 +662,11 @@ mod tests {
         let script = vec![1, 6, 183, 111, 203, 71];
         check_hash(
             &Transaction::new_script(&pk, Some(script.as_slice()), TESTNET, fee, ts),
-            "9hAcaE3yDMMbwXMcZpdANC9YNXPgqK6Exyqd5U9jXhUq",
+            "HASXvcgoikizpWnCLd2cXNeCN5DxdKojCfcn8f7T3KjK",
         );
         check_hash(
             &Transaction::new_script(&pk, None, TESTNET, fee, ts),
-            "AphhKVVhyBH2SFYTaSzWbGL7NPHZ1F9RUkFN4uhMZ9QE",
+            "1gwS1qkKKShwk5scB7M7N9t6L3eX2Hpkp9hF5RG8HJD",
         );
         check_hash(
             &Transaction::new_sponsor(&pk, &asset, Some(100), fee, ts),
@@ -674,7 +674,7 @@ mod tests {
         );
         check_hash(
             &Transaction::new_set_asset_script(&pk, &asset, None, TESTNET, fee, ts),
-            "8MGgNDBgvEAW5ZQAG4p1bMK2zsnxUX6T5DwmcSM3F7Bh",
+            "FiZJwFqVbYiYeRN1oADFuqCmKHQJpDJonD5a9ekqXFuY",
         );
     }
 
