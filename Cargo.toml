@@ -1,16 +1,22 @@
 [package]
 name = "waves"
 version = "0.2.0"
-authors = ["peterz <peterz@rambler.ru>"]
+authors = ["peterz <peterz@rambler.ru>", "DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
 description = "Library to work with Waves blockchain (https://wavesplatform.com)"
+edition = "2018"
 license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/waves-rust/waves-lib-rust"
+repository = "https://github.com/waves-rust/waves-lib-rust"
+keywords = ["waves", "blockchain"]
 
 [dependencies]
-base58 = "^0.1"
-rand = "^0.4"
+base58 = "0.1.0"
+rand = "0.7.3"
+tiny-bip39 = "0.7.3"
 
-blake2 = "^0.7"
-curve25519-dalek = "^0.19"
-ed25519-dalek = "^0.8"
-sha2 = "^0.7"
-sha3 = "^0.7"
+blake2 = "0.7.1"
+curve25519-dalek = "1.2.3"
+ed25519-dalek = "1.0.0-pre.3"
+sha2 = "0.8.0"
+sha3 = "0.8.0"
