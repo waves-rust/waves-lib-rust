@@ -1,6 +1,6 @@
-//! Acryl
+//! Waves
 //!
-//! Library to work with Acryl blockchain (https://acrylplatform.com)
+//! Library to work with Waves blockchain (https://wavesplatform.com)
 //!
 mod bytebuffer;
 

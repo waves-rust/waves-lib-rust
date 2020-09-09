@@ -1,14 +1,14 @@
 [package]
-name = "acryl"
-version = "0.4.1"
-authors = ["DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
-description = "Library to work with Acryl blockchain (https://acrylplatform.com)"
+name = "waves"
+version = "0.2.0"
+authors = ["peterz <peterz@rambler.ru>", "DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
+description = "Library to work with Waves blockchain (https://wavesplatform.com)"
 edition = "2018"
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/deadblackclover/acryl-lib-rust"
-repository = "https://github.com/deadblackclover/acryl-lib-rust"
-keywords = ["acryl", "blockchain"]
+homepage = "https://github.com/waves-rust/waves-lib-rust"
+repository = "https://github.com/waves-rust/waves-lib-rust"
+keywords = ["waves", "blockchain"]
 
 [dependencies]
 base58 = "0.1.0"
