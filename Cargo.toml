@@ -17,6 +17,6 @@ tiny-bip39 = "0.7.3"
 
 blake2 = "0.7.1"
 curve25519-dalek = "1.2.3"
-ed25519-dalek = "1.0.0-pre.3"
+ed25519-dalek = "=1.0.0-pre.3"
 sha2 = "0.8.0"
 sha3 = "0.8.0"

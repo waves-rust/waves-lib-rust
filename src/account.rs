@@ -214,7 +214,7 @@ mod tests {
         );
         assert_eq!(
             acc.to_address(TESTNET).0,
-            "3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC"
+            "3MzGEv9wnaqrYFYujAXSH5RQfHaVKNQvx3D"
                 .from_base58()
                 .unwrap()
                 .as_slice()
@@ -237,7 +237,7 @@ mod tests {
 
         assert_eq!(
             account.public_key().to_address(TESTNET).to_string(),
-            "3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC"
+            "3MzGEv9wnaqrYFYujAXSH5RQfHaVKNQvx3D"
         );
     }
 }

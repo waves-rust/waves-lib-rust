@@ -587,7 +587,7 @@ mod tests {
         let pk = PublicKeyAccount([1u8; 32]);
         let asset = Asset::new([2u8; 32]);
         let lease = TransactionId::new([3u8; 32]);
-        let recipient = Address::from_string("3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC");
+        let recipient = Address::from_string("3MzGEv9wnaqrYFYujAXSH5RQfHaVKNQvx3D");
         let fee = 100000;
         let ts: u64 = 1536000000000;
 
@@ -681,7 +681,7 @@ mod tests {
     #[test]
     fn test_sign() {
         let sender = PrivateKeyAccount::from_seed("test");
-        let recipient = Address::from_string("3JNDp4BGCCDgeteewwkSQiHxad3ApyvBioC");
+        let recipient = Address::from_string("3MzGEv9wnaqrYFYujAXSH5RQfHaVKNQvx3D");
         let tx = Transaction::new_lease(&sender.1, &recipient, 100000, 84, 100000, 1500000000000);
 
         let ProvenTransaction { tx, proofs } = sender.sign_transaction(tx);
