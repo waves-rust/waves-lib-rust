@@ -1,9 +1,9 @@
-# Waves
+# waves-lib-rust
 
 ![crates.io](https://img.shields.io/crates/v/wavesplatform.svg)
 ![docs.rs](https://docs.rs/wavesplatform/badge.svg)
 
-A Rust interface to the Waves blockchain
+Library to work with [Waves blockchain](https://wavesplatform.com)
 
 # Usage
 ```rust
