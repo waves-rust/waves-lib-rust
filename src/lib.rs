@@ -1,4 +1,4 @@
-//! Waves
+//! wavesplatform
 //!
 //! Library to work with Waves blockchain (https://wavesplatform.com)
 //!
