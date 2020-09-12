@@ -18,6 +18,8 @@ const ADDRESS_LENGTH: usize = 26;
 pub const MAINNET: u8 = 'W' as u8;
 /// TESTNET chainID
 pub const TESTNET: u8 = 'T' as u8;
+/// STAGENET chainID
+pub const STAGENET: u8 = 'S' as u8;
 
 /// An account possessing a address.
 pub struct Address([u8; ADDRESS_LENGTH]);
