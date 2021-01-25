@@ -15,7 +15,7 @@ use wavesplatform::transaction::*;
 
 fn main() {
     let phrase = generate_phrase();
-    let account = PrivateKeyAccount::from_seed(phrase);
+    let account = PrivateKeyAccount::from_seed(&phrase);
     println!("My TESTNET address: {}", account.public_key().to_address(TESTNET).to_string());
 
     let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() * 1000;
