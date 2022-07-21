@@ -1,8 +1,9 @@
 use crate::transaction::{ProvenTransaction, Transaction};
 
 use base58::*;
-use blake2::digest::{Input, VariableOutput};
-use blake2::Blake2b;
+use blake2::digest::VariableOutput;
+use blake2::VarBlake2b;
+use blake2::digest::Update;
 use curve25519_dalek::constants;
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::*;
@@ -167,10 +168,11 @@ pub(crate) fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8;
 
 pub(crate) fn blake_hash(message: &[u8]) -> Vec<u8> {
     ////mv where?
-    let mut blake = <Blake2b as VariableOutput>::new(32).unwrap();
-    blake.process(message);
+    let mut blake = VarBlake2b::new(32).unwrap();
+    blake.update(message);
     let mut buf = [0u8; 32];
-    blake.variable_result(&mut buf).unwrap().to_vec()
+    blake.finalize_variable(|out| buf.copy_from_slice(out));
+    buf.to_vec()
 }
 
 pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {
