@@ -23,6 +23,7 @@ pub const TESTNET: u8 = 'T' as u8;
 pub const STAGENET: u8 = 'S' as u8;
 
 /// An account possessing a address.
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Address([u8; ADDRESS_LENGTH]);
 
 impl Address {
