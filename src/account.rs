@@ -1,9 +1,8 @@
 use crate::transaction::{ProvenTransaction, Transaction};
 
 use base58::*;
-use blake2::digest::VariableOutput;
+use blake2::digest::{Update, VariableOutput};
 use blake2::VarBlake2b;
-use blake2::digest::Update;
 use curve25519_dalek::constants;
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::*;

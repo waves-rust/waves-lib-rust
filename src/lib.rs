@@ -10,9 +10,9 @@
 //!
 //!# Usage
 //!```rust
-//!use base58::*;
 //!use std::time::{SystemTime, UNIX_EPOCH};
 //!use wavesplatform::account::{PrivateKeyAccount, TESTNET};
+//!use wavesplatform::base58::*;
 //!use wavesplatform::seed::*;
 //!use wavesplatform::transaction::*;
 //!
@@ -38,3 +38,5 @@ pub mod seed;
 pub mod transaction;
 /// Util module
 pub mod util;
+
+pub use base58;

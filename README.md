@@ -7,9 +7,9 @@ Library to work with [Waves blockchain](https://wavesplatform.com)
 
 # Usage
 ```rust
-use base58::*;
 use std::time::{SystemTime, UNIX_EPOCH};
 use wavesplatform::account::{PrivateKeyAccount, TESTNET};
+use wavesplatform::base58::*;
 use wavesplatform::seed::*;
 use wavesplatform::transaction::*;
 
