@@ -1,6 +1,6 @@
 [package]
 name = "wavesplatform"
-version = "0.2.3"
+version = "0.2.4"
 authors = ["peterz <peterz@rambler.ru>", "DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
 description = "Library to work with Waves blockchain (https://wavesplatform.com)"
 edition = "2018"
