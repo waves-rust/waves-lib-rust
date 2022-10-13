@@ -1,6 +1,7 @@
-use crate::transaction::{ProvenTransaction, Transaction};
+mod address;
+mod private_key;
+mod public_key;
 
-use base58::*;
 use blake2::digest::{Update, VariableOutput};
 use blake2::VarBlake2b;
 use curve25519_dalek::constants;
@@ -8,123 +9,22 @@ use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::*;
 use rand;
 use rand::Rng;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha512};
 use sha3::Keccak256;
+
+pub use address::*;
+pub use private_key::*;
+pub use public_key::*;
 
 const ADDRESS_VERSION: u8 = 1;
 const ADDRESS_LENGTH: usize = 26;
 
 /// MAINNET chainID
-pub const MAINNET: u8 = 'W' as u8;
+pub const MAINNET: u8 = b'W';
 /// TESTNET chainID
-pub const TESTNET: u8 = 'T' as u8;
+pub const TESTNET: u8 = b'T';
 /// STAGENET chainID
-pub const STAGENET: u8 = 'S' as u8;
-
-/// An account possessing a address.
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Address([u8; ADDRESS_LENGTH]);
-
-impl Address {
-    pub fn chain_id(&self) -> u8 {
-        self.0[1]
-    }
-
-    pub fn to_bytes(&self) -> &[u8; ADDRESS_LENGTH] {
-        &self.0
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.to_base58()
-    }
-
-    pub fn from_string(base58: &str) -> Address {
-        let mut bytes = [0u8; ADDRESS_LENGTH];
-        bytes.copy_from_slice(base58.from_base58().unwrap().as_slice()); ////map unwrap, handle bad length
-        Address(bytes)
-    }
-}
-
-/// An account possessing a public key. Using `PublicKeyAccount` you can get the address.
-pub struct PublicKeyAccount(pub [u8; PUBLIC_KEY_LENGTH]);
-
-impl PublicKeyAccount {
-    pub fn to_bytes(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
-        &self.0
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.to_base58()
-    }
-
-    pub fn to_address(&self, chain_id: u8) -> Address {
-        let mut buf = [0u8; ADDRESS_LENGTH];
-        buf[0] = ADDRESS_VERSION;
-        buf[1] = chain_id;
-        buf[2..22].copy_from_slice(&secure_hash(&self.0)[..20]);
-        let checksum = &secure_hash(&buf[..22])[..4];
-        buf[22..].copy_from_slice(checksum);
-        Address(buf)
-    }
-}
-
-/// An account possessing a private key. `PrivateKeyAccount` is tied to an address and can sign
-/// transactions.
-/// # Usage
-/// ```
-/// use wavesplatform::account::{PrivateKeyAccount, TESTNET};
-/// let account = PrivateKeyAccount::from_seed("seed");
-/// println!("my address: {}", account.public_key().to_address(TESTNET).to_string());
-/// ```
-pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
-
-impl PrivateKeyAccount {
-    pub fn public_key(&self) -> &PublicKeyAccount {
-        &self.1
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.to_base58()
-    }
-
-    pub fn from_key_pair(
-        sk: [u8; SECRET_KEY_LENGTH],
-        pk: [u8; PUBLIC_KEY_LENGTH],
-    ) -> PrivateKeyAccount {
-        PrivateKeyAccount(sk, PublicKeyAccount(pk))
-    }
-
-    pub fn from_seed(seed: &str) -> PrivateKeyAccount {
-        let seed_bytes = seed.as_bytes().to_vec();
-        let nonce = [0, 0, 0, 0].to_vec();
-
-        let mut sk = [0u8; SECRET_KEY_LENGTH];
-
-        let acc_seed = secure_hash([nonce, seed_bytes].concat().as_slice());
-        let hash_seed = &Sha256::digest(acc_seed.as_slice());
-
-        sk.copy_from_slice(hash_seed);
-        sk[0] &= 248;
-        sk[31] &= 127;
-        sk[31] |= 64;
-
-        let ed_pk = &Scalar::from_bits(sk) * &constants::ED25519_BASEPOINT_TABLE;
-        let pk = ed_pk.to_montgomery().to_bytes();
-        PrivateKeyAccount(sk, PublicKeyAccount(pk))
-    }
-
-    pub fn sign_bytes(&self, data: &[u8]) -> [u8; SIGNATURE_LENGTH] {
-        sign(data, &self.0)
-    }
-
-    pub fn sign_transaction<'a>(&self, tx: Transaction<'a>) -> ProvenTransaction<'a> {
-        let signature = self.sign_bytes(&tx.to_bytes());
-        ProvenTransaction {
-            tx,
-            proofs: vec![signature.to_vec()],
-        }
-    }
-}
+pub const STAGENET: u8 = b'S';
 
 static INITBUF: [u8; 32] = [
     0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -184,6 +84,8 @@ pub(crate) fn secure_hash(message: &[u8]) -> Vec<u8> {
 mod tests {
     use super::*;
 
+    use base58::FromBase58;
+
     #[test]
     fn test_hashes() {
         let blake_in = "blake".as_bytes();
@@ -201,7 +103,10 @@ mod tests {
 
     #[test]
     fn test_private_key_from_seed() {
-        let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("test");
+        // let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("test");
+        let private_key_account = PrivateKeyAccount::from_seed("test");
+        let sk = private_key_account.private_key();
+        let acc = private_key_account.public_key();
         assert_eq!(
             sk,
             "CuedBd7a6vBC6XXpatEj4S9ZoquLYPB7Ud17b69msZkt"
@@ -217,7 +122,7 @@ mod tests {
                 .as_slice()
         );
         assert_eq!(
-            acc.to_address(TESTNET).0,
+            acc.to_address(TESTNET).to_bytes(),
             "3MzGEv9wnaqrYFYujAXSH5RQfHaVKNQvx3D"
                 .from_base58()
                 .unwrap()
