@@ -103,7 +103,6 @@ mod tests {
 
     #[test]
     fn test_private_key_from_seed() {
-        // let PrivateKeyAccount(sk, acc) = PrivateKeyAccount::from_seed("test");
         let private_key_account = PrivateKeyAccount::from_seed("test");
         let sk = private_key_account.private_key();
         let acc = private_key_account.public_key();
