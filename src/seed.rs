@@ -9,7 +9,7 @@ use bip39::{Language, Mnemonic, MnemonicType};
 pub fn generate_phrase() -> String {
     let mnemonic = Mnemonic::new(MnemonicType::Words18, Language::English);
     let phrase: &str = mnemonic.phrase();
-    format!("{}", phrase)
+    phrase.to_string()
 }
 
 #[cfg(test)]
