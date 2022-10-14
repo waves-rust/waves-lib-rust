@@ -1,128 +1,17 @@
+mod data_entry;
+mod hash;
+mod transaction_data;
+mod type_id;
+mod version;
+
 use crate::account::{blake_hash, Address, PublicKeyAccount};
 use crate::bytebuffer::Buffer;
-use base58::*;
 
-/// Transaction type
-pub enum Type {
-    Issue = 3,
-    Transfer = 4,
-    Reissue = 5,
-    Burn = 6,
-    Lease = 8,
-    LeaseCancel = 9,
-    Alias = 10,
-    MassTransfer = 11,
-    Data = 12,
-    SetScript = 13,
-    Sponsor = 14,
-    SetAssetScript = 15,
-}
-
-/// Transaction version
-pub enum Version {
-    V1 = 1,
-    V2 = 2,
-}
-
-const HASH_LENGTH: usize = 32;
-
-pub type TransactionId = Hash;
-pub type Asset = Hash;
-
-pub struct Hash([u8; HASH_LENGTH]); //// converge w/ Address using macro
-
-impl Hash {
-    pub fn to_bytes(&self) -> [u8; HASH_LENGTH] {
-        self.0
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.to_base58()
-    }
-
-    pub fn new(bytes: [u8; HASH_LENGTH]) -> Hash {
-        Hash(bytes)
-    }
-
-    pub fn from_string(base58: &str) -> Asset {
-        let mut bytes = [0u8; HASH_LENGTH];
-        bytes.copy_from_slice(base58.from_base58().unwrap().as_slice()); ////map unwrap, handle bad length
-        Hash(bytes)
-    }
-}
-
-/// Structure that sets key and value of account data storage entry.
-pub enum DataEntry<'a> {
-    Integer(&'a str, u64),
-    Boolean(&'a str, bool),
-    Binary(&'a str, &'a Vec<u8>),
-    String(&'a str, &'a str),
-}
-
-/// Data specific to a particular transaction type
-pub enum TransactionData<'a> {
-    Issue {
-        name: &'a str,
-        description: &'a str,
-        quantity: u64,
-        decimals: u8,
-        reissuable: bool,
-        chain_id: u8,
-        script: Option<&'a [u8]>,
-    },
-    Transfer {
-        recipient: &'a Address,
-        asset: Option<&'a Asset>,
-        amount: u64,
-        fee_asset: Option<&'a Asset>,
-        attachment: Option<&'a str>,
-    },
-    Reissue {
-        asset: &'a Asset,
-        quantity: u64,
-        reissuable: bool,
-        chain_id: u8,
-    },
-    Burn {
-        asset: &'a Asset,
-        quantity: u64,
-        chain_id: u8,
-    },
-    Lease {
-        recipient: &'a Address,
-        amount: u64,
-        chain_id: u8,
-    },
-    CancelLease {
-        lease_id: &'a TransactionId,
-        chain_id: u8,
-    },
-    Alias {
-        alias: &'a str,
-        chain_id: u8,
-    },
-    MassTransfer {
-        asset: Option<&'a Asset>,
-        transfers: Vec<(&'a Address, u64)>,
-        attachment: Option<&'a str>,
-    },
-    Data {
-        data: Vec<&'a DataEntry<'a>>,
-    },
-    SetScript {
-        script: Option<&'a [u8]>,
-        chain_id: u8,
-    },
-    Sponsor {
-        asset: &'a Asset,
-        rate: Option<u64>,
-    },
-    SetAssetScript {
-        asset: &'a Asset,
-        script: Option<&'a [u8]>,
-        chain_id: u8,
-    },
-}
+pub use data_entry::*;
+pub use hash::*;
+pub use transaction_data::*;
+pub use type_id::*;
+pub use version::*;
 
 /// Transaction data. Data specific to a particular transaction type are stored in the `data` field.
 /// # Usage
@@ -142,7 +31,7 @@ pub struct Transaction<'a> {
     version: u8,
 }
 
-use self::TransactionData::*;
+use transaction_data::TransactionData::*;
 
 impl<'a> Transaction<'a> {
     pub fn new_issue(
@@ -579,7 +468,10 @@ pub struct ProvenTransaction<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::account::{Address, PrivateKeyAccount, TESTNET};
+
+    use base58::FromBase58;
     use ed25519_dalek::*;
 
     #[test]
@@ -592,7 +484,7 @@ mod tests {
         let ts: u64 = 1536000000000;
 
         fn check_hash(tx: &Transaction, hash: &str) -> () {
-            assert_eq!(tx.id().0, hash.from_base58().unwrap().as_slice());
+            assert_eq!(tx.id().to_bytes(), hash.from_base58().unwrap().as_slice());
         }
 
         check_hash(
