@@ -19,7 +19,13 @@ pub use version::*;
 /// use wavesplatform::account::{PrivateKeyAccount, TESTNET};
 /// use wavesplatform::transaction::*;
 /// let account = PrivateKeyAccount::from_seed("seed");
-/// let tx = Transaction::new_alias(&account.public_key(), "rhino", TESTNET, 100000, 1536000000000);
+/// let tx = Transaction::new_alias(
+///     &account.public_key(),
+///     "rhino",
+///     TESTNET,
+///     100000,
+///     1536000000000,
+/// );
 /// let signed_tx = account.sign_transaction(tx);
 /// ```
 pub struct Transaction<'a> {

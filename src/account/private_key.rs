@@ -14,7 +14,10 @@ use std::fmt;
 /// ```
 /// use wavesplatform::account::{PrivateKeyAccount, TESTNET};
 /// let account = PrivateKeyAccount::from_seed("seed");
-/// println!("my address: {}", account.public_key().to_address(TESTNET).to_string());
+/// println!(
+///     "my address: {}",
+///     account.public_key().to_address(TESTNET).to_string()
+/// );
 /// ```
 pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
 
