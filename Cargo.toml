@@ -2,7 +2,7 @@
 name = "wavesplatform"
 version = "0.2.4"
 authors = ["peterz <peterz@rambler.ru>", "DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
-description = "Library to work with Waves blockchain (https://wavesplatform.com)"
+description = "Library to work with Waves blockchain (https://waves.tech/)"
 edition = "2018"
 license = "MIT"
 readme = "README.md"

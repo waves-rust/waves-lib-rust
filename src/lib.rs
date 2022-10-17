@@ -4,7 +4,7 @@
 )]
 //! wavesplatform
 //!
-//! Library to work with Waves blockchain (https://wavesplatform.com).
+//! Library to work with Waves blockchain (https://waves.tech/).
 //!
 //! Supports offline transaction signing and creating addresses and keys.
 //!

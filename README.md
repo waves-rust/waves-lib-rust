@@ -3,7 +3,7 @@
 ![crates.io](https://img.shields.io/crates/v/wavesplatform.svg)
 ![docs.rs](https://docs.rs/wavesplatform/badge.svg)
 
-Library to work with [Waves blockchain](https://wavesplatform.com)
+Library to work with [Waves blockchain](https://waves.tech/)
 
 # Usage
 ```rust
