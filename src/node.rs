@@ -1,17 +1,32 @@
+/// Module with a set of node answer struct
 pub mod response;
 
 use response::*;
 
+/// Mainnet node REST API
 pub const MAINNET_URL: &str = "https://nodes.wavesnodes.com";
+/// Testnet node REST API
 pub const TESTNET_URL: &str = "https://nodes-testnet.wavesnodes.com";
+/// Stagenet node REST API
 pub const STAGENET_URL: &str = "https://nodes-stagenet.wavesnodes.com";
+/// Local node REST API
 pub const LOCAL_URL: &str = "http://127.0.0.1:6869";
 
+/// [`Node`] client for executing asynchronous requests.
+///
+/// [`Node`] client has url as the configuration value, but the default is set to what is usually the most commonly desired value. Use [`Node::from_url()`] to create the node client.
 pub struct Node<'a> {
     url: &'a str,
 }
 
+impl<'a> Default for Node<'a> {
+    fn default() -> Self {
+        Node { url: MAINNET_URL }
+    }
+}
+
 impl<'a> Node<'a> {
+    /// Create an [`Node`] from url string.
     pub fn from_url(url: &'a str) -> Self {
         Node { url }
     }
