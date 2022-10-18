@@ -24,6 +24,7 @@ use std::fmt;
 ///     account.public_key().to_address(TESTNET).to_string()
 /// );
 /// ```
+#[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct PublicKeyAccount(pub [u8; PUBLIC_KEY_LENGTH]);
 
 impl PublicKeyAccount {
@@ -41,6 +42,12 @@ impl PublicKeyAccount {
         let checksum = &secure_hash(&buf[..22])[..4];
         buf[22..].copy_from_slice(checksum);
         Address::from_bytes(&buf)
+    }
+}
+
+impl fmt::Debug for PublicKeyAccount {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.to_base58())
     }
 }
 

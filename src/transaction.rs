@@ -28,6 +28,7 @@ pub use version::*;
 /// );
 /// let signed_tx = account.sign_transaction(tx);
 /// ```
+#[derive(Debug)]
 pub struct Transaction<'a> {
     data: TransactionData<'a>,
     fee: u64,

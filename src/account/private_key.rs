@@ -31,6 +31,7 @@ use std::fmt;
 ///     account.public_key().to_address(TESTNET).to_string()
 /// );
 /// ```
+#[derive(Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct PrivateKeyAccount([u8; SECRET_KEY_LENGTH], pub PublicKeyAccount);
 
 impl PrivateKeyAccount {
@@ -84,6 +85,12 @@ impl PrivateKeyAccount {
             tx,
             proofs: vec![signature.to_vec()],
         }
+    }
+}
+
+impl fmt::Debug for PrivateKeyAccount {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.to_base58())
     }
 }
 

@@ -2,6 +2,7 @@ use crate::account::Address;
 use crate::transaction::{Asset, DataEntry, TransactionId};
 
 /// Data specific to a particular transaction type
+#[derive(Debug)]
 pub enum TransactionData<'a> {
     Issue {
         name: &'a str,
