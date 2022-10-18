@@ -1,6 +1,19 @@
 use std::fmt;
 
 /// Structure that sets key and value of account data storage entry.
+///
+/// Account data storage is a key-value storage associated with an account.
+///
+/// The key of each entry is a unique string.
+///
+/// The value is the data of one of the types:
+///
+/// * string
+/// * boolean
+/// * integral
+/// * array of bytes
+///
+/// The size of an account data storage is unlimited.
 #[derive(Debug, Eq, PartialEq)]
 pub enum DataEntry<'a> {
     Integer(&'a str, u64),
