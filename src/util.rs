@@ -1,5 +1,9 @@
+mod amount;
+
 use curve25519_dalek::montgomery::MontgomeryPoint;
 use ed25519_dalek::*;
+
+pub use amount::*;
 
 /// Signature verify function
 pub fn sig_verify(
