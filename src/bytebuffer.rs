@@ -10,6 +10,7 @@ impl Buffer {
         Buffer { buf: Vec::new() }
     }
 
+    #[allow(dead_code)]
     pub fn from_bytes(b: &[u8]) -> Buffer {
         Buffer { buf: Vec::from(b) }
     }
@@ -55,9 +56,9 @@ impl Buffer {
             self.byte(0x02)
                 .byte(chain_id)
                 .size(recipient.len())
-                .bytes(&recipient.as_bytes())
+                .bytes(recipient.as_bytes())
         } else {
-            self.bytes(&recipient.from_base58().unwrap().as_slice())
+            self.bytes(recipient.from_base58().unwrap().as_slice())
         }
     }
 

@@ -48,14 +48,14 @@ pub(crate) fn sign(message: &[u8], secret_key: &[u8; SECRET_KEY_LENGTH]) -> [u8;
         .compress()
         .to_bytes();
 
-    let ed_pubkey = &constants::ED25519_BASEPOINT_POINT * &Scalar::from_bits(*secret_key);
+    let ed_pubkey = constants::ED25519_BASEPOINT_POINT * Scalar::from_bits(*secret_key);
     let pubkey = ed_pubkey.compress().to_bytes();
 
     hash = Sha512::default();
     hash.input(&r);
     hash.input(&pubkey);
     hash.input(message);
-    let s = &(&Scalar::from_hash(hash) * &Scalar::from_bits(*secret_key)) + &rsc;
+    let s = (Scalar::from_hash(hash) * Scalar::from_bits(*secret_key)) + rsc;
 
     let sign = pubkey[31] & 0x80;
     let mut result = [0; SIGNATURE_LENGTH];

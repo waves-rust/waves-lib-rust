@@ -41,6 +41,7 @@ pub struct Transaction<'a> {
 use transaction_data::TransactionData::*;
 
 impl<'a> Transaction<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub fn new_issue(
         sender_public_key: &'a PublicKeyAccount,
         name: &'a str,
@@ -71,6 +72,7 @@ impl<'a> Transaction<'a> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_transfer(
         sender_public_key: &'a PublicKeyAccount,
         recipient: &'a Address,
@@ -328,8 +330,8 @@ impl<'a> Transaction<'a> {
                 attachment,
             } => buf
                 .bytes(self.sender_public_key.to_bytes())
-                .asset_opt(&asset)
-                .asset_opt(&fee_asset)
+                .asset_opt(asset)
+                .asset_opt(fee_asset)
                 .long(self.timestamp)
                 .long(amount)
                 .long(self.fee)
@@ -343,7 +345,7 @@ impl<'a> Transaction<'a> {
             } => buf
                 .byte(chain_id)
                 .bytes(self.sender_public_key.to_bytes())
-                .asset(&asset)
+                .asset(asset)
                 .long(quantity)
                 .boolean(reissuable)
                 .long(self.fee)
@@ -355,7 +357,7 @@ impl<'a> Transaction<'a> {
             } => buf
                 .byte(chain_id)
                 .bytes(self.sender_public_key.to_bytes())
-                .asset(&asset)
+                .asset(asset)
                 .long(quantity)
                 .long(self.fee)
                 .long(self.timestamp),
@@ -390,7 +392,7 @@ impl<'a> Transaction<'a> {
                 attachment,
             } => {
                 buf.bytes(self.sender_public_key.to_bytes())
-                    .asset_opt(&asset)
+                    .asset_opt(asset)
                     .size(transfers.len());
                 for (addr, amt) in transfers {
                     buf.bytes(addr.to_bytes()).long(*amt);
