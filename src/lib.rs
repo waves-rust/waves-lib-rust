@@ -4,34 +4,49 @@
 )]
 //! wavesplatform
 //!
-//! Library to work with Waves blockchain (https://wavesplatform.com).
+//! Library to work with Waves blockchain (<https://waves.tech/>).
 //!
 //! Supports offline transaction signing and creating addresses and keys.
 //!
 //!# Usage
 //!```rust
-//!use std::time::{SystemTime, UNIX_EPOCH};
-//!use wavesplatform::account::{PrivateKeyAccount, TESTNET};
-//!use wavesplatform::base58::*;
-//!use wavesplatform::seed::*;
-//!use wavesplatform::transaction::*;
+//! use std::time::{SystemTime, UNIX_EPOCH};
+//! use wavesplatform::account::{PrivateKeyAccount, TESTNET};
+//! use wavesplatform::base58::*;
+//! use wavesplatform::seed::*;
+//! use wavesplatform::transaction::*;
 //!
-//!fn main() {
-//!    let phrase = generate_phrase();
-//!    let account = PrivateKeyAccount::from_seed(&phrase);
-//!    println!("My TESTNET address: {}", account.public_key().to_address(TESTNET).to_string());
+//! fn main() {
+//!     let phrase = generate_phrase();
+//!     let account = PrivateKeyAccount::from_seed(&phrase);
+//!     println!(
+//!         "My TESTNET address: {}",
+//!         account.public_key().to_address(TESTNET).to_string()
+//!     );
 //!
-//!    let ts = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() * 1000;
-//!    let tx = Transaction::new_alias(&account.public_key(), "rhino", TESTNET, 100000, ts);
-//!    println!("ID is {}", tx.id().to_string());
-//!    let ptx = account.sign_transaction(tx);
-//!    println!("Proofs are {:?}", ptx.proofs.iter().map(|p| p.to_base58()).collect::<Vec<String>>());
-//!}
-//!```
+//!     let ts = SystemTime::now()
+//!         .duration_since(UNIX_EPOCH)
+//!         .unwrap()
+//!         .as_secs()
+//!         * 1000;
+//!     let tx = Transaction::new_alias(&account.public_key(), "rhino", TESTNET, 100000, ts);
+//!     println!("ID is {}", tx.id().to_string());
+//!     let ptx = account.sign_transaction(tx);
+//!     println!(
+//!         "Proofs are {:?}",
+//!         ptx.proofs
+//!             .iter()
+//!             .map(|p| p.to_base58())
+//!             .collect::<Vec<String>>()
+//!     );
+//! }
+//! ```
 mod bytebuffer;
 
 /// Address module
 pub mod account;
+/// Module for interacting with the REST API of a Waves node
+pub mod node;
 /// Seed phrase module
 pub mod seed;
 /// Transaction module
