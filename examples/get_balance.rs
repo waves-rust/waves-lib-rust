@@ -1,4 +1,5 @@
 use wavesplatform::node::{Node, MAINNET_URL};
+use wavesplatform::util::Amount;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -9,13 +10,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_balance("3PEktVux2RhchSN63DsDo4b4mz4QqzKSeDv")
         .await?;
 
-    println!("Balance: {} WAVES", result.balance());
+    let balance = Amount::from_wavelet(result.balance());
+
+    println!("Balance: {} WAVES", balance);
 
     let result = node
         .get_balance_details("3PEktVux2RhchSN63DsDo4b4mz4QqzKSeDv")
         .await?;
 
-    println!("Regular balance: {} WAVES", result.regular());
+    let balance = Amount::from_wavelet(result.regular());
+
+    println!("Regular balance: {} WAVES", balance);
 
     Ok(())
 }

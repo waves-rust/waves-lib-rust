@@ -1,6 +1,6 @@
 [package]
 name = "wavesplatform"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["peterz <peterz@rambler.ru>", "DEADBLACKCLOVER <deadblackclover@protonmail.com>"]
 description = "Library to work with Waves blockchain (https://waves.tech/)"
 edition = "2018"
@@ -13,6 +13,7 @@ keywords = ["waves", "blockchain"]
 [dependencies]
 base58 = "0.2.0"
 rand = "0.8.5"
+regex = "1.6.0"
 tiny-bip39 = "1.0.0"
 
 blake2 = "0.9.2"

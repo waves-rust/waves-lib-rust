@@ -34,6 +34,7 @@ impl<'a> Node<'a> {
     /// Get the regular balance in WAVES at a given address
     /// ```no_run
     /// use wavesplatform::node::{Node, MAINNET_URL};
+    /// use wavesplatform::util::Amount;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -43,7 +44,9 @@ impl<'a> Node<'a> {
     ///         .get_balance("3PEktVux2RhchSN63DsDo4b4mz4QqzKSeDv")
     ///         .await?;
     ///
-    ///     println!("Balance: {} WAVES", result.balance());
+    ///     let balance = Amount::from_wavelet(result.balance());
+    ///
+    ///     println!("Balance: {} WAVES", balance);
     ///
     ///     Ok(())
     /// }
@@ -62,6 +65,7 @@ impl<'a> Node<'a> {
     /// Get the available, regular, generating, and effective balance
     /// ```no_run
     /// use wavesplatform::node::{Node, MAINNET_URL};
+    /// use wavesplatform::util::Amount;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -71,7 +75,9 @@ impl<'a> Node<'a> {
     ///         .get_balance_details("3PEktVux2RhchSN63DsDo4b4mz4QqzKSeDv")
     ///         .await?;
     ///
-    ///     println!("Regular balance: {} WAVES", result.regular());
+    ///     let balance = Amount::from_wavelet(result.regular());
+    ///
+    ///     println!("Regular balance: {} WAVES", balance);
     ///
     ///     Ok(())
     /// }
