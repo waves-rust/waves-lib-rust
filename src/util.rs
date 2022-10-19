@@ -1,8 +1,10 @@
+mod alias;
 mod amount;
 
 use curve25519_dalek::montgomery::MontgomeryPoint;
 use ed25519_dalek::*;
 
+pub use alias::*;
 pub use amount::*;
 
 /// Signature verify function
