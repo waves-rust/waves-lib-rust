@@ -26,9 +26,9 @@ pub fn sig_verify(
     ed_pubkey[31] &= 0x7F; // should be zero already, but just in case
     ed_pubkey[31] |= sign;
 
-    PublicKey::from_bytes(&ed_pubkey)
+    VerifyingKey::from_bytes(&ed_pubkey)
         .unwrap()
-        .verify(message, &Signature::from_bytes(&sig).unwrap())
+        .verify(message, &Signature::from_bytes(&sig))
         .is_ok()
 }
 
